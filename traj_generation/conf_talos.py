@@ -27,9 +27,17 @@ rf_frame_name = "leg_right_6_joint"          # right foot joint name
 lf_frame_name = "leg_left_6_joint"           # left foot joint name
 contactNormal = np.array([0., 0., 1.])       # direction of the normal to the contact surface
 
+priority_com = 0
+priority_foot = 1
+priority_posture = 1
+priority_forceRef = 1
+priority_waist = 1
+priority_torque_bounds = 1
+priority_joint_bounds = 1
+
 w_com = 1.0                       # weight of center of mass task
 w_foot = 0.1                      # weight of the foot motion task
-w_posture = 0.1                   # weight of joint posture task
+w_posture = 1e-1                   # weight of joint posture task
 w_forceRef = 1e-3                 # weight of force regularization task
 w_waist = 1.0                     # weight of waist task
 w_torque_bounds = 1.0             # weight of the torque bounds

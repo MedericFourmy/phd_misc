@@ -76,38 +76,38 @@ class TsidBiped:
         comTask = tsid.TaskComEquality("task-com", robot)
         comTask.setKp(conf.kp_com * np.ones(3))
         comTask.setKd(2.0 * np.sqrt(conf.kp_com) * np.ones(3))
-        formulation.addMotionTask(comTask, conf.w_com, 0, 0.0)
+        formulation.addMotionTask(comTask, conf.w_com, conf.priority_com, 0.0)
         
         postureTask = tsid.TaskJointPosture("task-posture", robot)
         postureTask.setKp(conf.kp_posture * np.ones(robot.nv-6))
         postureTask.setKd(2.0 * np.sqrt(conf.kp_posture) * np.ones(robot.nv-6))
-        formulation.addMotionTask(postureTask, conf.w_posture, 1, 0.0)
+        formulation.addMotionTask(postureTask, conf.w_posture, conf.priority_posture, 0.0)
         
-        # self.leftFootTask = tsid.TaskSE3Equality("task-left-foot", self.robot, self.conf.lf_frame_name)
-        # self.leftFootTask.setKp(self.conf.kp_foot * np.ones(6))
-        # self.leftFootTask.setKd(2.0 * np.sqrt(self.conf.kp_foot) * np.ones(6))
+        self.leftFootTask = tsid.TaskSE3Equality("task-left-foot", self.robot, conf.lf_frame_name)
+        self.leftFootTask.setKp(conf.kp_foot * np.ones(6))
+        self.leftFootTask.setKd(2.0 * np.sqrt(conf.kp_foot) * np.ones(6))
         self.trajLF = tsid.TrajectorySE3Constant("traj-left-foot", H_lf_ref)
-        # formulation.addMotionTask(self.leftFootTask, self.conf.w_foot, 1, 0.0)
+        formulation.addMotionTask(self.leftFootTask, conf.w_foot, conf.priority_foot, 0.0)
         
-        # self.rightFootTask = tsid.TaskSE3Equality("task-right-foot", self.robot, self.conf.rf_frame_name)
-        # self.rightFootTask.setKp(self.conf.kp_foot * np.ones(6))
-        # self.rightFootTask.setKd(2.0 * np.sqrt(self.conf.kp_foot) * np.ones(6).T)
+        self.rightFootTask = tsid.TaskSE3Equality("task-right-foot", self.robot, conf.rf_frame_name)
+        self.rightFootTask.setKp(conf.kp_foot * np.ones(6))
+        self.rightFootTask.setKd(2.0 * np.sqrt(conf.kp_foot) * np.ones(6).T)
         self.trajRF = tsid.TrajectorySE3Constant("traj-right-foot", H_rf_ref)
-        # formulation.addMotionTask(self.rightFootTask, self.conf.w_foot, 1, 0.0)
+        formulation.addMotionTask(self.rightFootTask, conf.w_foot, conf.priority_foot, 0.0)
         
         # self.tau_max = conf.tau_max_scaling*robot.model().effortLimit[-robot.na:]
         # self.tau_min = -self.tau_max
         # actuationBoundsTask = tsid.TaskActuationBounds("task-actuation-bounds", robot)
         # actuationBoundsTask.setBounds(self.tau_min, self.tau_max)
         # if(conf.w_torque_bounds>0.0):
-        #     formulation.addActuationTask(actuationBoundsTask, conf.w_torque_bounds, 0, 0.0)
+        #     formulation.addActuationTask(actuationBoundsTask, conf.w_torque_bounds, conf.priority_torque_bounds, 0.0)
             
         # jointBoundsTask = tsid.TaskJointBounds("task-joint-bounds", robot, conf.dt)
         # self.v_max = conf.v_max_scaling * robot.model().velocityLimit[-robot.na:]
         # self.v_min = -self.v_max
         # jointBoundsTask.setVelocityBounds(self.v_min, self.v_max)
         # if(conf.w_joint_bounds>0.0):
-        #     formulation.addMotionTask(jointBoundsTask, conf.w_joint_bounds, 0, 0.0)
+        #     formulation.addMotionTask(jointBoundsTask, conf.w_joint_bounds, conf.priority_joint_bounds, 0.0)
         
         com_ref = robot.com(data)
         self.trajCom = tsid.TrajectoryEuclidianConstant("traj_com", com_ref)
@@ -195,7 +195,7 @@ class TsidBiped:
     def update_display(self, q, t):
         self.robot_display.display(q)
         x_com = self.robot.com(self.formulation.data())
-        x_com_ref = self.trajCom.getSample(t).pos()
+        x_com_ref = self.comTask.position_ref
         H_lf = self.robot.position(self.formulation.data(), self.LF)
         H_rf = self.robot.position(self.formulation.data(), self.RF)
         x_lf_ref = self.trajLF.getSample(t).pos()[:3]
