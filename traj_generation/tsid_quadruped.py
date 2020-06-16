@@ -217,9 +217,9 @@ class TsidQuadruped:
         self.comTask.setReference(self.sample_com)
         
     def set_foot_3d_ref(self, pos, vel, acc, i):
-        self.sample_feet_pos[i][:3,0] = pos
-        self.sample_feet_vel[i][:3,0] = vel
-        self.sample_feet_acc[i][:3,0] = acc
+        self.sample_feet_pos[i][:3] = pos
+        self.sample_feet_vel[i][:3] = vel
+        self.sample_feet_acc[i][:3] = acc
         self.sample_feet[i].pos(self.sample_feet_pos[i])
         self.sample_feet[i].vel(self.sample_feet_vel[i])
         self.sample_feet[i].acc(self.sample_feet_acc[i])        
@@ -229,14 +229,13 @@ class TsidQuadruped:
         data = self.invdyn.data()
         H  = self.robot.framePosition(data, self.foot_frame_ids[i])
         v  = self.robot.velocity(data, self.foot_frame_ids[i])
-        # a = self.foot_tracking_tasks[i].getAcceleration(dv)
-        a = np.zeros(3)
+        a = self.foot_tracking_tasks[i].getAcceleration(dv)
         return H.translation, v.linear, a[:3]
         
     def remove_contact(self, i, transition_time=0.0):
         H_ref = self.robot.framePosition(self.invdyn.data(), self.foot_frame_ids[i])
-        self.traj_feet[i].setReference(H_rf_ref)
-        self.rightFootTask.setReference(self.traj_feet[i].computeNext())
+        self.traj_feet[i].setReference(H_ref)
+        self.foot_tracking_tasks[i].setReference(self.traj_feet[i].computeNext())
         self.invdyn.removeRigidContact(self.contacts[i].name, transition_time)
         self.active_contacts[i] = False
              
