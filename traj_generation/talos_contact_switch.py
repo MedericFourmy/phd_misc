@@ -9,7 +9,7 @@ dt = conf.dt
 
 tsid_talos = TsidBiped(conf, viewer=True)
 
-data = tsid_talos.formulation.data()
+data = tsid_talos.invdyn.data()
 robot = tsid_talos.robot
 
 
@@ -23,7 +23,7 @@ shift_traj = np.linspace(pos_c[:2], posLF[:2], SHIFT_DURATION/dt)
 
 # param for RF traj during "swing phase"
 posRF, _, _ = tsid_talos.get_RF_3d_pos_vel_acc(np.zeros(3))
-amp        = np.array([0.1, 0.0, -0.2])                    # amplitude function
+amp        = np.array([-0.0, 0.2, -0.2])                    # amplitude function
 # amp        = np.array([0.0, 0.0, 0.0])                    # amplitude function
 offset     = posRF - amp                          
 two_pi_f             = 2*np.pi*np.array([0.2, 0.2, 0.2])   # movement frequencies along each axis
@@ -62,8 +62,8 @@ for i in range(0, conf.N_SIMULATION):
         print ("QP problem could not be solved! Error code:", sol.status)
         break
     
-    tau = tsid_talos.formulation.getActuatorForces(sol)
-    dv  = tsid_talos.formulation.getAccelerations(sol)
+    tau = tsid_talos.invdyn.getActuatorForces(sol)
+    dv  = tsid_talos.invdyn.getAccelerations(sol)
 
     # integrate one step
     q, v = tsid_talos.integrate_dv(q, v, dv, dt)

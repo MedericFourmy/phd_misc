@@ -29,8 +29,8 @@ priority_waist = 1
 priority_torque_bounds = 0
 priority_joint_bounds = 0
 
-w_com = 100.0                     # weight of center of mass task
-w_foot = 1                        # weight of the foot motion task
+w_com = 10.0                       # weight of center of mass task
+w_foot = 10                        # weight of the foot motion task
 w_posture = 1e-1                  # weight of joint posture task
 w_forceRef = 1e-3                 # weight of force regularization task
 w_waist = 1.0                     # weight of waist task
@@ -39,7 +39,7 @@ w_joint_bounds = 0.0
 w_motion = 1.0
 
 kp_contact = 30.0                 # proportional gain of contact constraint
-kp_foot = 100.0                    # proportional gain of contact constraint
+kp_foot = 10000.0                    # proportional gain of contact constraint
 kp_com = 20.0                     # proportional gain of center of mass task               
 kp_waist = 500.0                  # proportional gain of waist task
 
@@ -61,10 +61,10 @@ CAMERA_TRANSFORM = [0.016945913434028625, -2.2850289344787598, 0.378912597894668
 
 SPHERE_RADIUS = 0.03
 REF_SPHERE_RADIUS = 0.03
-COM_SPHERE_COLOR  = (1, 0.5, 0, 0.5)
-COM_REF_SPHERE_COLOR  = (0, 1, 0, 0.5)
+COM_SPHERE_COLOR  = (1, 0.8, 0, 0.5)
+COM_REF_SPHERE_COLOR  = (1, 0, 0, 0.5)
 F_SPHERE_COLOR  = (0, 1, 0, 0.5)
-F_REF_SPHERE_COLOR  = (0, 1, 0.5, 0.5)
+F_REF_SPHERE_COLOR  = (0, 0, 1, 0.5)
 
 path = '/opt/openrobots/share/example-robot-data/robots/solo_description'
 urdf = path + '/robots/solo12.urdf'

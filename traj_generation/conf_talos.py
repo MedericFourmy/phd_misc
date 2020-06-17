@@ -36,7 +36,7 @@ priority_torque_bounds = 0
 priority_joint_bounds = 0
 
 w_com = 1.0                       # weight of center of mass task
-w_foot = 1                      # weight of the foot motion task
+w_foot = 1                        # weight of the foot motion task
 w_posture = 1e-1                  # weight of joint posture task
 w_forceRef = 1e-3                 # weight of force regularization task
 w_waist = 1.0                     # weight of waist task
@@ -44,7 +44,7 @@ w_torque_bounds = 1.0             # weight of the torque bounds
 w_joint_bounds = 0.0
 
 kp_contact = 30.0                 # proportional gain of contact constraint
-kp_foot = 100.0                    # proportional gain of contact constraint
+kp_foot = 100.0                   # proportional gain of contact constraint
 kp_com = 20.0                     # proportional gain of center of mass task               
 kp_waist = 500.0                  # proportional gain of waist task
 

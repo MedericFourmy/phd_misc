@@ -49,30 +49,38 @@ class TsidQuadruped:
 
         robot.computeAllTerms(data, q, v)
 
-
-        # RIGID POINT CONTACTS
         self.foot_frame_names = [conf.f1_frame_name, conf.f2_frame_name, conf.f3_frame_name, conf.f4_frame_name]
-        self.foot_frame_ids = [robot.model().getFrameId(frame_name) for frame_name in self.foot_frame_names]
+        self.foot_frame_ids = [self.model.getFrameId(frame_name) for frame_name in self.foot_frame_names]
+
         self.contacts = 4*[None]
-        for i, (frame_name, fid) in enumerate(zip(self.foot_frame_names, self.foot_frame_ids)):
-            self.contacts[i] = tsid.ContactPoint('{}_contact'.format(frame_name), robot, frame_name, conf.contactNormal, conf.mu, conf.fMin, conf.fMax)
-            self.contacts[i].setKp(conf.kp_contact * np.ones(3).T)
-            self.contacts[i].setKd(2.0 * np.sqrt(conf.kp_contact) * np.ones(3).T)
+        self.tasks_tracking_foot = 4*[None]
+        self.traj_feet = 4*[None]
+        self.sample_feet = 4*[None]
+        mask = np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+        for i_foot, (frame_name, fid) in enumerate(zip(self.foot_frame_names, self.foot_frame_ids)):
             Hf_ref = robot.framePosition(data, fid)
-            self.contacts[i].setReference(Hf_ref)
-            self.contacts[i].useLocalFrame(False)
-            invdyn.addRigidContact(self.contacts[i], conf.w_forceRef)
+            
+            # RIGID POINT CONTACTS
+            self.contacts[i_foot] = tsid.ContactPoint('{}_contact'.format(frame_name), robot, frame_name, conf.contactNormal, conf.mu, conf.fMin, conf.fMax)
+            self.contacts[i_foot].setKp(conf.kp_contact * np.ones(3))
+            self.contacts[i_foot].setKd(2.0 * np.sqrt(conf.kp_contact) * np.ones(3))
+            self.contacts[i_foot].setReference(Hf_ref)
+            self.contacts[i_foot].useLocalFrame(False)
+            invdyn.addRigidContact(self.contacts[i_foot], conf.w_forceRef)
 
+            # FEET TRACKING TASKS
+            self.tasks_tracking_foot[i_foot] = tsid.TaskSE3Equality(
+                'task-foot{}'.format(i_foot), self.robot, self.foot_frame_names[i_foot])
+            self.tasks_tracking_foot[i_foot].setKp(conf.kp_foot * mask)
+            self.tasks_tracking_foot[i_foot].setKd(2.0 * np.sqrt(conf.kp_foot) * mask)
+            self.tasks_tracking_foot[i_foot].setMask(mask)
+            self.tasks_tracking_foot[i_foot].useLocalFrame(False)
+            invdyn.addMotionTask(self.tasks_tracking_foot[i_foot], conf.w_foot, conf.priority_foot, 0.0)
 
-        # FEET TRACKING TASKS
-        self.foot_tracking_tasks = [tsid.TaskSE3Equality('task-foot{}'.format(i), self.robot, frame_name)
-                                    for i, frame_name in enumerate(self.foot_frame_names)]
-        self.traj_feet = []
-        for i, foot_tracking_task in enumerate(self.foot_tracking_tasks):
-            foot_tracking_task.setKd(2.0 * np.sqrt(conf.kp_foot) * np.ones(6))
-            H_ref = robot.framePosition(data, self.foot_frame_ids[i])
-            self.traj_feet.append(tsid.TrajectorySE3Constant('traj-foot{}'.format(i), H_ref))
-            invdyn.addMotionTask(foot_tracking_task, conf.w_foot, conf.priority_foot, 0.0)
+            # Hf_ref.translation[2] = Hf_ref.translation[2] + 0.05  
+            self.traj_feet[i_foot] = tsid.TrajectorySE3Constant('traj-foot{}'.format(i_foot), Hf_ref)
+            self.sample_feet[i_foot] = self.traj_feet[i_foot].computeNext()
+
 
         # COM TASK
         comTask = tsid.TaskComEquality('task-com', robot)
@@ -85,19 +93,7 @@ class TsidQuadruped:
         postureTask.setKp(conf.kp_posture * np.ones(robot.nv-6))
         postureTask.setKd(2.0 * np.sqrt(conf.kp_posture) * np.ones(robot.nv-6))
         invdyn.addMotionTask(postureTask, conf.w_posture, conf.priority_posture, 0.0)
-        
-        # # WAIST Task
-        # waistTask = tsid.TaskSE3Equality('keepWaist', robot, 'root_joint') # waist -> root_joint
-        # waistTask.setKp(conf.kp_waist * np.ones(6)) # Proportional gain defined before = 500
-        # waistTask.setKd(2.0 * np.sqrt(conf.kp_waist) * np.ones(6)) # Derivative gain = 2 * sqrt(500), critical damping
-        # # Add a Mask to the task which will select the vector dimensions on which the task will act.
-        # # In this case the waist configuration is a vector 6d (position and orientation -> SE3)
-        # # Here we set a mask = [0 0 0 1 1 1] so the task on the waist will act on the orientation of the robot
-        # mask = np.ones(6)
-        # # mask[:3] = 0.
-        # waistTask.setMask(mask)
-        # invdyn.addMotionTask(waistTask, conf.w_waist, conf.priority_waist, 0.0)
-        
+
         # TORQUE BOUND TASK
         # self.tau_max = conf.tau_max_scaling*robot.model().effortLimit[-robot.na:]
         # self.tau_min = -self.tau_max
@@ -193,7 +189,12 @@ class TsidQuadruped:
                 print ('\tnormal force %s: %.1f'%(contact.name.ljust(20,'.'), contact.getNormalForce(f)))
 
         print ('\ttracking err %s: %.3f'%(self.comTask.name.ljust(20,'.'), norm(self.comTask.position_error, 2)))
+        print ('\ttracking err %s: %.3f'%(self.tasks_tracking_foot[0].name.ljust(20,'.'), norm(self.tasks_tracking_foot[0].position_error, 2)))
+        print ('\ttracking err %s: %.3f'%(self.tasks_tracking_foot[1].name.ljust(20,'.'), norm(self.tasks_tracking_foot[1].position_error, 2)))
+        print ('\ttracking err %s: %.3f'%(self.tasks_tracking_foot[2].name.ljust(20,'.'), norm(self.tasks_tracking_foot[2].position_error, 2)))
+        print ('\ttracking err %s: %.3f'%(self.tasks_tracking_foot[3].name.ljust(20,'.'), norm(self.tasks_tracking_foot[3].position_error, 2)))
         print ('\t||v||: %.3f\t ||dv||: %.3f'%(norm(v, 2), norm(dv)))
+
     
     def update_display(self, q, t):
         self.robot_display.display(q)
@@ -223,19 +224,19 @@ class TsidQuadruped:
         self.sample_feet[i].pos(self.sample_feet_pos[i])
         self.sample_feet[i].vel(self.sample_feet_vel[i])
         self.sample_feet[i].acc(self.sample_feet_acc[i])        
-        self.foot_tracking_tasks[i].setReference(self.sample_feet[i])
-        
+        self.tasks_tracking_foot[i].setReference(self.sample_feet[i])
+
     def get_3d_pos_vel_acc(self, dv, i):
         data = self.invdyn.data()
         H  = self.robot.framePosition(data, self.foot_frame_ids[i])
         v  = self.robot.velocity(data, self.foot_frame_ids[i])
-        a = self.foot_tracking_tasks[i].getAcceleration(dv)
+        a = self.tasks_tracking_foot[i].getAcceleration(dv)
         return H.translation, v.linear, a[:3]
         
     def remove_contact(self, i, transition_time=0.0):
         H_ref = self.robot.framePosition(self.invdyn.data(), self.foot_frame_ids[i])
         self.traj_feet[i].setReference(H_ref)
-        self.foot_tracking_tasks[i].setReference(self.traj_feet[i].computeNext())
+        self.tasks_tracking_foot[i].setReference(self.traj_feet[i].computeNext())
         self.invdyn.removeRigidContact(self.contacts[i].name, transition_time)
         self.active_contacts[i] = False
              
