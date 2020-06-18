@@ -1,6 +1,9 @@
+import os
 import numpy as np
 import pandas as pd
 import pinocchio as pin
+from multicontact_api import ContactSequence, ContactPhase, ContactPatch
+from curves import piecewise
 
 class TrajLogger:
 
@@ -80,8 +83,51 @@ class TrajLogger:
             colname = 'v{}'.format(col)
             df_v[colname] = v_traj[:,col]
         
-        df_q.to_csv ('{}_q.csv'.format(traj_name), sep=sep, index=False, header=False)
-        df_v.to_csv ('{}_v.csv'.format(traj_name), sep=sep, index=False, header=False)
+        df_q.to_csv (os.path.join(self.directory, '{}_q.csv'.format(traj_name)), sep=sep, index=False, header=False)
+        df_v.to_csv (os.path.join(self.directory, '{}_v.csv'.format(traj_name)), sep=sep, index=False, header=False)
+        print('q and v traj saved: ')
 
-    def store_mcapi_traj(self):
-        pass
+    def store_mcapi_traj(self, tsid_wrapper, traj_name):
+        # trajectory with only one ContactPhase (simpler to read/write)
+        # when feet not in contact, the force is exactly zero, that's the only diff
+
+        cs = ContactSequence()
+        cp = ContactPhase()
+
+        # assign trajectories :
+        t_arr = self.data_log['t']
+
+        cp.timeInitial = t_arr[0]
+        cp.timeFinal = t_arr[-1]
+        cp.duration = t_arr[-1] - t_arr[0] 
+
+        print(t_arr.shape)
+        print(self.data_log['q'].shape)
+        print(self.data_log['v'].shape)
+        print(self.data_log['dv'].shape)
+        print(self.data_log['tau'].shape)
+        
+        # col number of trajectories should be the time traj size hence the transpose
+        cp.q_t = piecewise.FromPointsList(self.data_log['q'].T, t_arr)
+        cp.dq_t = piecewise.FromPointsList(self.data_log['v'].T, t_arr)
+        cp.ddq_t = piecewise.FromPointsList(self.data_log['dv'].T, t_arr)
+        cp.tau_t = piecewise.FromPointsList(self.data_log['tau'].T, t_arr)
+        cp.c_t = piecewise.FromPointsList(self.data_log['c'].T, t_arr)
+        cp.dc_t = piecewise.FromPointsList(self.data_log['dc'].T, t_arr)
+        cp.ddc_t = piecewise.FromPointsList(self.data_log['ddc'].T, t_arr)  # not needed
+        cp.L_t = piecewise.FromPointsList(self.data_log['Lc'].T, t_arr)
+        # cp.wrench_t = wrench
+        # cp.zmp_t = zmp
+        # cp.root_t = root
+
+        # contact force trajectories
+        for i_foot, frame_name in enumerate(tsid_wrapper.foot_frame_names):
+            cp.addContact(frame_name, ContactPatch(pin.SE3(),0.5))  # dummy placement and friction coeff
+            cp.addContactForceTrajectory(frame_name, piecewise.FromPointsList(self.data_log['f{}'.format(i_foot)].T, t_arr))
+
+        cs.append(cp)  # only one contact phase
+
+        savepath = os.path.join(self.directory, traj_name+'.cs')
+        cs.saveAsBinary(savepath)
+        print('Saved ' + savepath)
+
