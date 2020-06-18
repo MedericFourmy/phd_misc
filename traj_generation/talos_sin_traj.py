@@ -3,12 +3,12 @@ import numpy as np
 import pinocchio as pin
 import tsid
 from tsid_wrapper import TsidWrapper
-import conf_talos_std as conf
+import conf_talos as conf
 from traj_logger import TrajLogger
 
 
 tsid_talos = TsidWrapper(conf, viewer=conf.VIEWER_ON)
-logger = TrajLogger()
+logger = TrajLogger('/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
 
 data = tsid_talos.invdyn.data()
 robot = tsid_talos.robot
@@ -43,10 +43,11 @@ for i in range(0, conf.N_SIMULATION):
     
     dv  = tsid_talos.invdyn.getAccelerations(sol)
 
+    # record data before integration
     logger.append_data_from_sol(t, q, v, dv, tsid_talos, sol)
 
     # integrate one step
-    q, v = tsid_talos.integrate_dv(q, v, dv, dt)
+    q, v = tsid_talos.integrate_dv_R3SO3(q, v, dv, dt)
     t += dt
 
     if (i % conf.PRINT_N) == 0:
@@ -59,11 +60,9 @@ for i in range(0, conf.N_SIMULATION):
         tsid_talos.update_display(q, t)
         time_start = time.time()
 
-
-
 logger.set_data_lst_as_arrays()
 # logger.store_qv_trajs('talos_sin_traj', sep=' ')
-logger.store_mcapi_traj(tsid_talos, 'talos_sin_traj')
+logger.store_mcapi_traj(tsid_talos, 'talos_sin_traj_R3SO3')
 
 import matplotlib.pyplot as plt
 

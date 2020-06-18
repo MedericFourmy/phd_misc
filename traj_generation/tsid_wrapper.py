@@ -203,6 +203,26 @@ class TsidWrapper:
         v += dt*dv
         return q, v
 
+    def integrate_dv_R3SO3(self, q, v, dv, dt):
+        b_v = v[0:3]
+        b_w = v[3:6]
+        b_acc = dv[0:3] + np.cross(b_w, b_v)
+        
+        p_int = q[:3]
+        oRb_int = pin.Quaternion(q[3:7].reshape((4,1))).toRotationMatrix()
+        v_int = oRb_int@v[:3]
+
+        p_int = p_int + v_int*dt + 0.5*oRb_int @ b_acc*dt**2
+        v_int = v_int + oRb_int @ b_acc*dt
+        oRb_int = oRb_int @ pin.exp(b_w*dt)
+
+        q[:3] = p_int
+        q[3:7] = pin.Quaternion(oRb_int).coeffs()
+        q[7:] += v[6:]*dt
+        v += dt*dv
+        v[:3] = oRb_int.T@v_int
+        return q, v
+
     def compute_and_solve(self, t, q, v):
         HQPData = self.invdyn.computeProblemData(t, q, v)
         sol = self.solver.solve(HQPData)

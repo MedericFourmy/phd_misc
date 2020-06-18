@@ -35,9 +35,9 @@ class TrajLogger:
         """
         data = {
             't': t,
-            'q': q,
-            'v': v,
-            'dv': dv,
+            'q': q.copy(),
+            'v': v.copy(),
+            'dv': dv.copy(),
         }
         
         for i_foot in range(tsid_wrapper.nc):
@@ -73,8 +73,8 @@ class TrajLogger:
         df_q = pd.DataFrame()
         df_v = pd.DataFrame()
         if time_sec:
-            df_q['t'] = np.array(self.data_log['t'])
-            df_v['t'] = np.array(self.data_log['t'])
+            df_q['t'] = self.data_log['t']
+            df_v['t'] = self.data_log['t']
         else:
             df_q['t'] = np.arange(q_traj.shape[0])
             df_v['t'] = np.arange(v_traj.shape[0])

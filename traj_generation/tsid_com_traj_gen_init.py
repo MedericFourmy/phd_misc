@@ -8,11 +8,11 @@
 # Added trajectory parsing to multicontact API Contact sequence and file generation.
 
 
+import os
 import matplotlib.pyplot as plt;plt.ion()
 import numpy as np
 from numpy import nan
 from numpy.linalg import norm as norm
-import os
 import time as tmp
 import eigenpy
 eigenpy.switchToNumpyArray()
@@ -26,7 +26,7 @@ import gepetto.corbaserver
 GVIEWER_DISPLAY_TRAJ = False
 STORE_TRAJ = True
 SHOW_PLOTS = False
-TRAJ_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/trajs/'
+TRAJ_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/general_phd_repo/centroidalkin/data/tsid_gen/'
 OUTPUT_FILE_NAME = 'sinY_nowaist.cs'
 WAIST_TASK = False
 
@@ -370,34 +370,35 @@ for i in range(0, N_SIMULATION):
     # q = pin.integrate(model, q, dt*v_mean)
     ##########################
 
-    # Integration scheme used in WOLF (R3xSO(3) in WOLF though)
-    # SE3
-    q = pin.integrate(model, q, dt*v)
-    v += dt*dv
-    t += dt
-    #########################
-
-    # # DIRECT INTEGRATION
-    # b_v = v[0:3]
-    # b_w = v[3:6]
-    # b_acc = dv[0:3] + np.cross(b_w, b_v)
-    
-    # p_int = q[:3]
-    # oRb_int = pin.Quaternion(q[3:7].reshape((4,1))).toRotationMatrix()
-    # v_int = oRb_int@v[:3]
-
-    # p_int = p_int + v_int*dt + 0.5*oRb_int @ b_acc*dt**2
-    # v_int = v_int + oRb_int @ b_acc*dt
-    # oRb_int = oRb_int @ pin.exp(b_w*dt)
-
-    # q[:3] = p_int
-    # q[3:7] = pin.Quaternion(oRb_int).coeffs()
-    # q[7:] += v[6:]*dt
+    # # Integration scheme used in WOLF (R3xSO(3) in WOLF though)
+    # # SE3
+    # q = pin.integrate(model, q, dt*v)
     # v += dt*dv
-    # v[:3] = oRb_int.T@v_int
-
     # t += dt
-    # ##########################
+    # #########################
+
+    # DIRECT INTEGRATION
+    # Closer to the WOLF integration scheme
+    b_v = v[0:3]
+    b_w = v[3:6]
+    b_acc = dv[0:3] + np.cross(b_w, b_v)
+    
+    p_int = q[:3]
+    oRb_int = pin.Quaternion(q[3:7].reshape((4,1))).toRotationMatrix()
+    v_int = oRb_int@v[:3]
+
+    p_int = p_int + v_int*dt + 0.5*oRb_int @ b_acc*dt**2
+    v_int = v_int + oRb_int @ b_acc*dt
+    oRb_int = oRb_int @ pin.exp(b_w*dt)
+
+    q[:3] = p_int
+    q[3:7] = pin.Quaternion(oRb_int).coeffs()
+    q[7:] += v[6:]*dt
+    v += dt*dv
+    v[:3] = oRb_int.T@v_int
+
+    t += dt
+    ##########################
 
 if GVIEWER_DISPLAY_TRAJ:
     for i in range(N_SIMULATION):
@@ -541,7 +542,7 @@ if STORE_TRAJ:
 
     cs.append(cp)  # only one contact phase
 
-    cs.saveAsBinary(TRAJ_FOLDER + OUTPUT_FILE_NAME)
+    cs.saveAsBinary(os.path.join(TRAJ_FOLDER, OUTPUT_FILE_NAME))
     print('Saved ' + TRAJ_FOLDER + OUTPUT_FILE_NAME)
 
 
