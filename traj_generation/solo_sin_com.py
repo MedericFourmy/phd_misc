@@ -2,12 +2,14 @@ import time
 import numpy as np
 import pinocchio as pin
 import tsid
-from tsid_quadruped import TsidQuadruped
+from tsid_wrapper import TsidWrapper
 import conf_solo12 as conf
+from traj_logger import TrajLogger
 
 dt = conf.dt
 
-tsid_solo = TsidQuadruped(conf, viewer=True)
+tsid_solo = TsidWrapper(conf, viewer=True)
+logger = TrajLogger()
 
 data = tsid_solo.invdyn.data()
 robot = tsid_solo.robot
@@ -19,12 +21,10 @@ pos_com_init = robot.com(data)
 # Params for Com trajectory
 amp        = np.array([-0.02, 0.02, 0.02])                    # amplitude functio
 # amp        = np.array([0.0, 0.0, 0.03])                    # amplitude functio
-# amp        = np.array([0.0, 0.0, 0.0])                    # amplitude functio
 offset     = robot.com(data) - amp                         # offset of the mesured CoM 
 two_pi_f             = 2*np.pi*np.array([0.2, 0.4, 0.2])   # movement frequencies along each axis
 two_pi_f_amp         = two_pi_f * amp                      # 2π function times amplitude function
 two_pi_f_squared_amp = two_pi_f * two_pi_f_amp             # 2π function times squared amplitude function
-
 
 # Init values
 q, v = tsid_solo.q, tsid_solo.v
@@ -45,8 +45,9 @@ for i in range(0, conf.N_SIMULATION):
         print ("QP problem could not be solved! Error code:", sol.status)
         break
     
-    tau = tsid_solo.invdyn.getActuatorForces(sol)
     dv  = tsid_solo.invdyn.getAccelerations(sol)
+
+    logger.append_data_from_sol(t, q, v, dv, tsid_solo, sol)
 
     # integrate one step
     q, v = tsid_solo.integrate_dv(q, v, dv, dt)
@@ -64,3 +65,33 @@ for i in range(0, conf.N_SIMULATION):
 
 
 
+logger.set_data_lst_as_arrays()
+# logger.store_qv_trajs('solo_stomping', sep=' ')
+# logger.store_mcapi_traj(tsid_solo, 'solo_stomping')
+
+import matplotlib.pyplot as plt
+
+plt.figure('solo stomping contact forces')
+plt.title('solo stomping contact forces')
+plt.subplot(3,1,1)
+plt.plot(logger.data_log['t'], logger.data_log['f0'][:,0], label='f0x')
+plt.plot(logger.data_log['t'], logger.data_log['f1'][:,0], label='f1x')
+plt.plot(logger.data_log['t'], logger.data_log['f2'][:,0], label='f2x')
+plt.plot(logger.data_log['t'], logger.data_log['f3'][:,0], label='f3x')
+plt.legend()
+plt.grid()
+plt.subplot(3,1,2)
+plt.plot(logger.data_log['t'], logger.data_log['f0'][:,1], label='f0y')
+plt.plot(logger.data_log['t'], logger.data_log['f1'][:,1], label='f1y')
+plt.plot(logger.data_log['t'], logger.data_log['f2'][:,1], label='f2y')
+plt.plot(logger.data_log['t'], logger.data_log['f3'][:,1], label='f3y')
+plt.legend()
+plt.grid()
+plt.subplot(3,1,3)
+plt.plot(logger.data_log['t'], logger.data_log['f0'][:,2], label='f0z')
+plt.plot(logger.data_log['t'], logger.data_log['f1'][:,2], label='f1z')
+plt.plot(logger.data_log['t'], logger.data_log['f2'][:,2], label='f2z')
+plt.plot(logger.data_log['t'], logger.data_log['f3'][:,2], label='f3z')
+plt.legend()
+plt.grid()
+plt.show()

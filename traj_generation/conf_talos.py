@@ -23,8 +23,10 @@ mu = 0.3                            # friction coefficient
 fMin = 1.0                          # minimum normal force
 fMax = 1000.0                       # maximum normal force
 
-rf_frame_name = "leg_right_6_joint"          # right foot joint name
-lf_frame_name = "leg_left_6_joint"           # left foot joint name
+reference_config_q_name = 'half_sitting'
+
+contact_frame_names = ['leg_left_6_joint', 'leg_right_6_joint']
+contact6d = True
 contactNormal = np.array([0., 0., 1.])       # direction of the normal to the contact surface
 
 priority_com = 0  # if set to 1, w_com has to be orders of magnitude above other weights
@@ -63,19 +65,18 @@ kp_posture = np.array(                                    # proportional gain of
     100.,  100.]                                          # head
 ).T 
 
-
+VIEWER_ON = True
 PRINT_N = 500                   # print every PRINT_N time steps
 DISPLAY_N = 20                  # update robot configuration in viwewer every DISPLAY_N time steps
 CAMERA_TRANSFORM = [4.0, -0.2, 0.4, 0.5243823528289795, 0.518651008605957, 0.4620114266872406, 0.4925136864185333]
 
+
 SPHERE_RADIUS = 0.03
 REF_SPHERE_RADIUS = 0.03
-COM_SPHERE_COLOR  = (1, 0.5, 0, 0.5)
-COM_REF_SPHERE_COLOR  = (0, 1, 0, 0.5)
-RF_SPHERE_COLOR  = (0, 1, 0, 0.5)
-RF_REF_SPHERE_COLOR  = (0, 1, 0.5, 0.5)
-LF_SPHERE_COLOR  = (0, 0, 1, 0.5)
-LF_REF_SPHERE_COLOR  = (0.5, 0, 1, 0.5)
+COM_SPHERE_COLOR  = (1, 0.8, 0, 0.5)
+COM_REF_SPHERE_COLOR  = (1, 0, 0, 0.5)
+F_SPHERE_COLOR  = (0, 1, 0, 0.5)
+F_REF_SPHERE_COLOR  = (0, 0, 1, 0.5)
 
 path = '/opt/openrobots/share/example-robot-data/robots/talos_data'
 urdf = path + '/robots/talos_reduced.urdf'

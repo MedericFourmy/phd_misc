@@ -2,23 +2,23 @@ import time
 import numpy as np
 import pinocchio as pin
 import tsid
-from tsid_quadruped import TsidQuadruped
+from tsid_wrapper import TsidWrapper
 import conf_solo12 as conf
 from traj_logger import TrajLogger
 
 dt = conf.dt
 
-tsid_solo = TsidQuadruped(conf, viewer=conf.VIEWER_ON)
+tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
+logger = TrajLogger()
 
 data = tsid_solo.invdyn.data()
 robot = tsid_solo.robot
 
 # Params for Com trajectory
-SHIFT_DURATION = 3
-H_init_f0 = tsid_solo.robot.framePosition(data, tsid_solo.foot_frame_ids[0])
-H_init_f1 = tsid_solo.robot.framePosition(data, tsid_solo.foot_frame_ids[1])
-H_init_f2 = tsid_solo.robot.framePosition(data, tsid_solo.foot_frame_ids[2])
-H_init_f3 = tsid_solo.robot.framePosition(data, tsid_solo.foot_frame_ids[3])
+H_init_f0 = tsid_solo.robot.framePosition(data, tsid_solo.contact_frame_ids[0])
+H_init_f1 = tsid_solo.robot.framePosition(data, tsid_solo.contact_frame_ids[1])
+H_init_f2 = tsid_solo.robot.framePosition(data, tsid_solo.contact_frame_ids[2])
+H_init_f3 = tsid_solo.robot.framePosition(data, tsid_solo.contact_frame_ids[3])
 H_init_lst = [H_init_f0, H_init_f1, H_init_f2, H_init_f3]
 pos_init_lst = [H.translation for H in H_init_lst]
 
@@ -51,9 +51,6 @@ t = 0.0 # time
 i = 0
 time_start = time.time()
 
-# Logger
-logger = TrajLogger()
-
 # State machine flags 
 end_traj = False
 new_shift = True
@@ -63,7 +60,8 @@ putting_foot_down = False
 
 raised_foot_nb = 0
 while not end_traj:
-
+    
+    # update end effector trajectory tasks based on state machine
     if new_shift:
         print('\n\n\n\nnew shift')
         support_feet = compute_other_feet(raised_foot_nb, feet_nb)
@@ -127,7 +125,6 @@ while not end_traj:
 
     if (i % conf.PRINT_N) == 0:
         tsid_solo.print_solve_check(sol, t, v, dv) 
-    
 
     if conf.VIEWER_ON and (i % conf.DISPLAY_N) == 0:
         time_spent = time.time() - time_start

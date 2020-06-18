@@ -40,11 +40,17 @@ class TrajLogger:
             'dv': dv,
         }
         
-        for i_foot in range(4):
+        for i_foot in range(tsid_wrapper.nc):
             if tsid_wrapper.invdyn.checkContact(tsid_wrapper.contacts[i_foot].name, sol):
                 f = tsid_wrapper.invdyn.getContactForce(tsid_wrapper.contacts[i_foot].name, sol) 
+                if tsid_wrapper.conf.contact6d:
+                    f = tsid_wrapper.contacts[i_foot].getForceGeneratorMatrix @ f
             else:
-                f = np.zeros(3)
+                if tsid_wrapper.conf.contact6d:
+                    f = np.zeros(6)
+                else:
+                    f = np.zeros(3)
+
             data['f{}'.format(i_foot)] = f        
         data['tau'] = tsid_wrapper.invdyn.getActuatorForces(sol)
 
@@ -101,12 +107,6 @@ class TrajLogger:
         cp.timeFinal = t_arr[-1]
         cp.duration = t_arr[-1] - t_arr[0] 
 
-        print(t_arr.shape)
-        print(self.data_log['q'].shape)
-        print(self.data_log['v'].shape)
-        print(self.data_log['dv'].shape)
-        print(self.data_log['tau'].shape)
-        
         # col number of trajectories should be the time traj size hence the transpose
         cp.q_t = piecewise.FromPointsList(self.data_log['q'].T, t_arr)
         cp.dq_t = piecewise.FromPointsList(self.data_log['v'].T, t_arr)
@@ -121,7 +121,7 @@ class TrajLogger:
         # cp.root_t = root
 
         # contact force trajectories
-        for i_foot, frame_name in enumerate(tsid_wrapper.foot_frame_names):
+        for i_foot, frame_name in enumerate(tsid_wrapper.contact_frame_names):
             cp.addContact(frame_name, ContactPatch(pin.SE3(),0.5))  # dummy placement and friction coeff
             cp.addContactForceTrajectory(frame_name, piecewise.FromPointsList(self.data_log['f{}'.format(i_foot)].T, t_arr))
 

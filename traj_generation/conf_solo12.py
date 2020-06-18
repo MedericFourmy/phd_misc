@@ -15,10 +15,10 @@ mu = 0.3                            # friction coefficient
 fMin = 1.0                          # minimum normal force
 fMax = 1000.0                       # maximum normal force
 
-f1_frame_name = 'HR_FOOT'
-f2_frame_name = 'HL_FOOT'
-f3_frame_name = 'FR_FOOT'
-f4_frame_name = 'FL_FOOT'
+reference_config_q_name = 'standing'
+
+contact_frame_names = ['HR_FOOT', 'HL_FOOT', 'FR_FOOT', 'FL_FOOT']
+contact6d = False
 contactNormal = np.array([0., 0., 1.])       # direction of the normal to the contact surface
 
 priority_com = 0  # if set to 1, w_com has to be orders of magnitude above other weights
