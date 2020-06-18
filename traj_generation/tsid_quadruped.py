@@ -4,8 +4,9 @@ Modified from tsid/exercizes/tsid_pided
 
 import eigenpy
 eigenpy.switchToNumpyArray()
-import pinocchio as se3
-from pinocchio import libpinocchio_pywrap as pin 
+# import pinocchio as pin
+# from pinocchio import libpinocchio_pywrap as pin 
+import pinocchio as pin
 import tsid
 import numpy as np
 from numpy.linalg import norm
@@ -28,9 +29,9 @@ class TsidQuadruped:
         print('Robot files:')
         print(conf.urdf)
         print(conf.srdf)
-        vector = se3.StdVec_StdString()
+        vector = pin.StdVec_StdString()
         vector.extend(item for item in conf.path)
-        self.robot = tsid.RobotWrapper(conf.urdf, vector, se3.JointModelFreeFlyer(), False)
+        self.robot = tsid.RobotWrapper(conf.urdf, vector, pin.JointModelFreeFlyer(), False)
         robot = self.robot
         self.model = robot.model()
 
@@ -143,7 +144,7 @@ class TsidQuadruped:
         
         # for gepetto viewer
         if(viewer):
-            self.robot_display = se3.RobotWrapper.BuildFromURDF(conf.urdf, [conf.path, ], se3.JointModelFreeFlyer())
+            self.robot_display = pin.RobotWrapper.BuildFromURDF(conf.urdf, [conf.path, ], pin.JointModelFreeFlyer())
             l = subprocess.getstatusoutput("ps aux |grep 'gepetto-gui'|grep -v 'grep'|wc -l")
             if int(l[1]) == 0:
                 os.system('gepetto-gui &')
@@ -168,7 +169,7 @@ class TsidQuadruped:
     # def integrate_dv(self, q, v, dv, dt):
     #     v_mean = v + 0.5*dt*dv
     #     v += dt*dv
-    #     q = se3.integrate(self.model, q, dt*v_mean)
+    #     q = pin.integrate(self.model, q, dt*v_mean)
     #     return q,v
 
     def integrate_dv(self, q, v, dv, dt):
