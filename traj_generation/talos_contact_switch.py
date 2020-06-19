@@ -84,7 +84,7 @@ for i in range(0, conf.N_SIMULATION):
 
 
 logger.set_data_lst_as_arrays()
-# logger.store_qv_trajs('solo_stomping', sep=' ')
+# logger.store_csv_trajs('solo_stomping', sep=' ')
 # logger.store_mcapi_traj(tsid_talos, 'solo_stomping')
 
 import matplotlib.pyplot as plt

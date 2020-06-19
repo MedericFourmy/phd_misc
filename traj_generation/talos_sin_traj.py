@@ -61,7 +61,7 @@ for i in range(0, conf.N_SIMULATION):
         time_start = time.time()
 
 logger.set_data_lst_as_arrays()
-# logger.store_qv_trajs('talos_sin_traj', sep=' ')
+# logger.store_csv_trajs('talos_sin_traj', sep=' ')
 logger.store_mcapi_traj(tsid_talos, 'talos_sin_traj_R3SO3')
 
 import matplotlib.pyplot as plt

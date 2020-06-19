@@ -7,11 +7,12 @@ from curves import piecewise
 
 class TrajLogger:
 
-    def __init__(self, directory=''):
+    def __init__(self, contact_names, directory=''):
         self.data_log = {
             't': [],  # time trajectory
             'q': [],  # configuration position trajectory
-            'v': []   # configuration velocity trajectory
+            'v': [],   # configuration velocity trajectory
+            'contact_names': contact_names
             }
         self.directory = directory
 
@@ -29,35 +30,36 @@ class TrajLogger:
             else:
                 self.data_log[key].append(val)
     
-    def append_data_from_sol(self, t, q, v, dv, tsid_wrapper, sol):
+    def append_data_from_sol(self, t, q, v, dv, tsidw, sol):
         """
-        tsid_wrapper: TsidQuadruped or TsidBiped(not tested)
+        tsidw: TsidQuadruped or TsidBiped(not tested)
         """
         data = {
             't': t,
             'q': q.copy(),
             'v': v.copy(),
-            'dv': dv.copy(),
+            'dv': dv.copy()
         }
         
-        for i_foot in range(tsid_wrapper.nc):
-            if tsid_wrapper.invdyn.checkContact(tsid_wrapper.contacts[i_foot].name, sol):
-                f = tsid_wrapper.invdyn.getContactForce(tsid_wrapper.contacts[i_foot].name, sol) 
-                if tsid_wrapper.conf.contact6d:
-                    f = tsid_wrapper.contacts[i_foot].getForceGeneratorMatrix @ f
+        for i_foot in range(tsidw.nc):
+            if tsidw.invdyn.checkContact(tsidw.contacts[i_foot].name, sol):
+                f = tsidw.invdyn.getContactForce(tsidw.contacts[i_foot].name, sol) 
+                if tsidw.conf.contact6d:
+                    f = tsidw.contacts[i_foot].getForceGeneratorMatrix @ f
             else:
-                if tsid_wrapper.conf.contact6d:
+                if tsidw.conf.contact6d:
                     f = np.zeros(6)
                 else:
                     f = np.zeros(3)
 
             data['f{}'.format(i_foot)] = f        
-        data['tau'] = tsid_wrapper.invdyn.getActuatorForces(sol)
+        data['tau'] = tsidw.invdyn.getActuatorForces(sol)
 
-        data['c'] = tsid_wrapper.robot.com(tsid_wrapper.invdyn.data())
-        data['dc'] = tsid_wrapper.robot.com_vel(tsid_wrapper.invdyn.data())
-        data['ddc'] = tsid_wrapper.comTask.getAcceleration(dv)
-        data['Lc'] = pin.computeCentroidalMomentum(tsid_wrapper.robot.model(), tsid_wrapper.robot.data(), q, v).angular
+        data['c'] = tsidw.robot.com(tsidw.invdyn.data())
+        data['dc'] = tsidw.robot.com_vel(tsidw.invdyn.data())
+        data['ddc'] = tsidw.comTask.getAcceleration(dv)
+        data['Lc'] = pin.computeCentroidalMomentum(tsidw.robot.model(), tsidw.robot.data(), q, v).angular
+        data['contacts'] = np.array([tsidw.invdyn.checkContact(contact.name, sol) for contact in tsidw.contacts])
 
         self.append_data(data)
 
@@ -65,22 +67,31 @@ class TrajLogger:
         for key in self.data_log:
             self.data_log[key] = np.array(self.data_log[key])
     
-    def store_qv_trajs(self, traj_name, sep, skip_free_flyer=True, time_sec=False):
+    def store_csv_trajs(self, traj_name, sep, skip_free_flyer=True, time_sec=False):
         if isinstance(self.data_log['q'], list): self.data_log['q'] = np.array(self.data_log['q']) 
         if isinstance(self.data_log['v'], list): self.data_log['v'] = np.array(self.data_log['v']) 
+        if isinstance(self.data_log['tau'], list): self.data_log['tau'] = np.array(self.data_log['tau']) 
+        if isinstance(self.data_log['contacts'], list): self.data_log['contacts'] = np.array(self.data_log['contacts']) 
         q_traj = self.data_log['q'].copy()
         v_traj = self.data_log['v'].copy()
+        tau_traj = self.data_log['tau'].copy()
+        contacts_traj = self.data_log['contacts'].copy()
         df_q = pd.DataFrame()
         df_v = pd.DataFrame()
+        df_tau = pd.DataFrame()
+        df_contacts = pd.DataFrame()
         if time_sec:
             df_q['t'] = self.data_log['t']
             df_v['t'] = self.data_log['t']
+            df_tau['t'] = self.data_log['t']
         else:
             df_q['t'] = np.arange(q_traj.shape[0])
             df_v['t'] = np.arange(v_traj.shape[0])
+            df_tau['t'] = np.arange(tau_traj.shape[0])
         if skip_free_flyer:
             q_traj = q_traj[:,7:]
             v_traj = v_traj[:,6:]
+            tau_traj = v_traj[:,:]
         
         for col in range(q_traj.shape[1]):
             colname = 'q{}'.format(col)
@@ -88,12 +99,22 @@ class TrajLogger:
         for col in range(v_traj.shape[1]):
             colname = 'v{}'.format(col)
             df_v[colname] = v_traj[:,col]
+        for col in range(v_traj.shape[1]):
+            colname = 'tau{}'.format(col)
+            df_tau[colname] = tau_traj[:,col]
+        for col, cname in enumerate(self.data_log['contact_names']):
+            df_contacts[cname] = contacts_traj[:,col]
         
-        df_q.to_csv (os.path.join(self.directory, '{}_q.csv'.format(traj_name)), sep=sep, index=False, header=False)
-        df_v.to_csv (os.path.join(self.directory, '{}_v.csv'.format(traj_name)), sep=sep, index=False, header=False)
-        print('q and v traj saved: ')
+        df_q.to_csv(os.path.join(self.directory, '{}_q.dat'.format(traj_name)), sep=sep, index=False, header=False)
+        df_v.to_csv(os.path.join(self.directory, '{}_v.dat'.format(traj_name)), sep=sep, index=False, header=False)
+        df_tau.to_csv(os.path.join(self.directory, '{}_tau.dat'.format(traj_name)), sep=sep, index=False, header=False)
+        df_contacts.to_csv(os.path.join(self.directory, '{}_contacts.dat'.format(traj_name)), sep=sep, index=False, header=False)
+        df_contact_names = pd.DataFrame(columns=self.data_log['contact_names'])
+        df_contact_names.to_csv(os.path.join(self.directory, '{}_contact_names.dat'.format(traj_name)), sep=sep, index=False, header=True)
 
-    def store_mcapi_traj(self, tsid_wrapper, traj_name):
+        print('q, v, tau and contacts traj saved in: ', self.directory)
+
+    def store_mcapi_traj(self, tsidw, traj_name):
         # trajectory with only one ContactPhase (simpler to read/write)
         # when feet not in contact, the force is exactly zero, that's the only diff
 
@@ -121,7 +142,7 @@ class TrajLogger:
         # cp.root_t = root
 
         # contact force trajectories
-        for i_foot, frame_name in enumerate(tsid_wrapper.contact_frame_names):
+        for i_foot, frame_name in enumerate(tsidw.contact_frame_names):
             cp.addContact(frame_name, ContactPatch(pin.SE3(),0.5))  # dummy placement and friction coeff
             cp.addContactForceTrajectory(frame_name, piecewise.FromPointsList(self.data_log['f{}'.format(i_foot)].T, t_arr))
 
