@@ -12,8 +12,8 @@ N_SIMULATION = 10000             # number of time steps simulated
 dt = 0.001                      # controller time step
 
 mu = 0.3                            # friction coefficient
-fMin = 1.0                          # minimum normal force
-fMax = 1000.0                       # maximum normal force
+fMin = 0.0                          # minimum normal force
+fMax = 500.0                       # maximum normal force
 
 reference_config_q_name = 'standing'
 
@@ -36,7 +36,6 @@ w_forceRef = 1e-3                 # weight of force regularization task
 w_waist = 1.0                     # weight of waist task
 w_torque_bounds = 1.0             # weight of the torque bounds
 w_joint_bounds = 0.0
-w_motion = 1.0
 
 kp_contact = 30.0                 # proportional gain of contact constraint
 kp_foot = 10000.0                    # proportional gain of contact constraint
@@ -44,7 +43,6 @@ kp_com = 20.0                     # proportional gain of center of mass task
 kp_waist = 500.0                  # proportional gain of waist task
 
 kd_com = 2.0 * np.sqrt(kp_com)
-# kd_com = 0   # useful if we don't have a desired com vel
 
 tau_max_scaling = 1.45            # scaling factor of torque bounds
 v_max_scaling = 0.8
