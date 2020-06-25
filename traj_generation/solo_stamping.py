@@ -10,7 +10,7 @@ from scipy.stats import logistic
 dt = conf.dt
 
 tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
-logger = TrajLogger(tsid_solo.contact_frame_names)
+logger = TrajLogger(tsid_solo.contact_frame_names, directory='temp_traj')
 
 data = tsid_solo.invdyn.data()
 robot = tsid_solo.robot
@@ -211,7 +211,7 @@ while not end_traj:
 
 
 logger.set_data_lst_as_arrays()
-logger.store_csv_trajs('solo_stamping', sep=' ')
+logger.store_csv_trajs('solo_stamping', sep=' ', skip_free_flyer=True)
 logger.store_mcapi_traj(tsid_solo, 'solo_stamping')
 
 import matplotlib.pyplot as plt

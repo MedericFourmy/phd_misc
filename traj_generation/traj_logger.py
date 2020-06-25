@@ -75,31 +75,38 @@ class TrajLogger:
         q_traj = self.data_log['q'].copy()
         v_traj = self.data_log['v'].copy()
         tau_traj = self.data_log['tau'].copy()
-        contacts_traj = self.data_log['contacts'].copy()
+        contacts_traj = self.data_log['contacts'].copy() * 1  # * 1 to store 1 and 0s instead of False True
+        assert(q_traj.shape[0] == v_traj.shape[0] == tau_traj.shape[0] == contacts_traj.shape[0])
+        N = q_traj.shape[0]
+        print('traj size: ', N)
+
         df_q = pd.DataFrame()
         df_v = pd.DataFrame()
         df_tau = pd.DataFrame()
         df_contacts = pd.DataFrame()
+
+        if skip_free_flyer:
+            q_traj = q_traj[:,7:]
+            v_traj = v_traj[:,6:]
+
         if time_sec:
             df_q['t'] = self.data_log['t']
             df_v['t'] = self.data_log['t']
             df_tau['t'] = self.data_log['t']
+            df_contacts['t'] = self.data_log['t']
         else:
-            df_q['t'] = np.arange(q_traj.shape[0])
-            df_v['t'] = np.arange(v_traj.shape[0])
-            df_tau['t'] = np.arange(tau_traj.shape[0])
-        if skip_free_flyer:
-            q_traj = q_traj[:,7:]
-            v_traj = v_traj[:,6:]
-            tau_traj = v_traj[:,:]
-        
+            df_q['t'] = np.arange(N)
+            df_v['t'] = np.arange(N)
+            df_tau['t'] = np.arange(N)
+            df_contacts['t'] = np.arange(N)
+            
         for col in range(q_traj.shape[1]):
             colname = 'q{}'.format(col)
             df_q[colname] = q_traj[:,col]
         for col in range(v_traj.shape[1]):
             colname = 'v{}'.format(col)
             df_v[colname] = v_traj[:,col]
-        for col in range(v_traj.shape[1]):
+        for col in range(tau_traj.shape[1]):
             colname = 'tau{}'.format(col)
             df_tau[colname] = tau_traj[:,col]
         for col, cname in enumerate(self.data_log['contact_names']):
