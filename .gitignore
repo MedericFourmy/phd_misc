@@ -1,5 +1,6 @@
 .vscode/
 __pycache__/
+.ipynb_checkpoints/
 *.pyc
 
 # data files
@@ -7,3 +8,9 @@ __pycache__/
 *.cs
 *.zip
 *.dat
+
+# pix
+*.png
+*.jpg
+*.jpeg
+*.gif
