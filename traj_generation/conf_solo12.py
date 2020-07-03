@@ -19,6 +19,7 @@ reference_config_q_name = 'standing'
 
 contact_frame_names = ['HR_FOOT', 'HL_FOOT', 'FR_FOOT', 'FL_FOOT']
 contact6d = False
+useLocalFrame = True
 contactNormal = np.array([0., 0., 1.])       # direction of the normal to the contact surface
 
 priority_com = 0  # if set to 1, w_com has to be orders of magnitude above other weights
@@ -52,7 +53,7 @@ kp_posture = np.array(
 ).T 
 
 
-VIEWER_ON = False
+VIEWER_ON = True
 PRINT_N = 500                   # print every PRINT_N time steps
 DISPLAY_N = 20                  # update robot configuration in viwewer every DISPLAY_N time steps
 CAMERA_TRANSFORM = [0.016945913434028625, -2.2850289344787598, 0.3789125978946686,

@@ -82,7 +82,7 @@ class TsidWrapper:
                 self.contacts[i_foot].setKp(conf.kp_contact * np.ones(3))
                 self.contacts[i_foot].setKd(2.0 * np.sqrt(conf.kp_contact) * np.ones(3))
                 self.contacts[i_foot].setReference(Hf_ref)
-                self.contacts[i_foot].useLocalFrame(False)
+                self.contacts[i_foot].useLocalFrame(conf.useLocalFrame)
                 invdyn.addRigidContact(self.contacts[i_foot], conf.w_forceRef)
 
             # FEET TRACKING TASKS

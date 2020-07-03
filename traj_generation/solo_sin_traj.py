@@ -8,15 +8,11 @@ from traj_logger import TrajLogger
 
 dt = conf.dt
 
-tsid_solo = TsidWrapper(conf, viewer=True)
+tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
 logger = TrajLogger(tsid_solo.contact_frame_names, directory='/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
 
 data = tsid_solo.invdyn.data()
 robot = tsid_solo.robot
-
-# Params for Com trajectory
-pos_f1, _, _ = tsid_solo.get_3d_pos_vel_acc(np.zeros(3), 1)
-pos_com_init = robot.com(data)
 
 # Params for Com trajectory
 amp        = np.array([-0.02, 0.02, 0.02])                    # amplitude functio
@@ -50,29 +46,28 @@ for i in range(0, conf.N_SIMULATION):
     logger.append_data_from_sol(t, q, v, dv, tsid_solo, sol)
 
     # integrate one step
-    q, v = tsid_solo.integrate_dv(q, v, dv, dt)
+    q, v = tsid_solo.integrate_dv_R3SO3(q, v, dv, dt)
     t += dt
 
     if (i % conf.PRINT_N) == 0:
         tsid_solo.print_solve_check(sol, t, v, dv)
 
-    if (i % conf.DISPLAY_N) == 0:
+    if conf.VIEWER_ON and (i % conf.DISPLAY_N) == 0:
         time_spent = time.time() - time_start
-        if(time_spent < dt*conf.DISPLAY_N): 
-            time.sleep(dt*conf.DISPLAY_N-time_spent)
+        if(time_spent < dt*conf.DISPLAY_N): time.sleep(dt*conf.DISPLAY_N-time_spent)
         tsid_solo.update_display(q, t)
         time_start = time.time()
 
 
 
 logger.set_data_lst_as_arrays()
-# logger.store_csv_trajs('solo_stomping', sep=' ')
-# logger.store_mcapi_traj(tsid_solo, 'solo_stomping')
+# logger.store_csv_trajs('solo_sin_traj', sep=' ')
+logger.store_mcapi_traj(tsid_solo, 'solo_sin_traj')
 
 import matplotlib.pyplot as plt
 
-plt.figure('solo stomping contact forces')
-plt.title('solo stomping contact forces')
+plt.figure('solo sin_com contact forces')
+plt.title('solo sin_com contact forces')
 plt.subplot(3,1,1)
 plt.plot(logger.data_log['t'], logger.data_log['f0'][:,0], label='f0x')
 plt.plot(logger.data_log['t'], logger.data_log['f1'][:,0], label='f1x')

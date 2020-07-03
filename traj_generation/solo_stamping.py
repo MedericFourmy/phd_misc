@@ -196,7 +196,8 @@ while not end_traj:
     logger.append_data_from_sol(t, q, v, dv, tsid_solo, sol)
 
     # integrate one step
-    q, v = tsid_solo.integrate_dv(q, v, dv, dt)
+    # q, v = tsid_solo.integrate_dv(q, v, dv, dt)
+    q, v = tsid_solo.integrate_dv_R3SO3(q, v, dv, dt)
     t += dt
     i += 1
 
