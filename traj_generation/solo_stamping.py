@@ -10,7 +10,7 @@ from scipy.stats import logistic
 dt = conf.dt
 
 tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
-logger = TrajLogger(tsid_solo.contact_frame_names, directory='temp_traj')
+logger = TrajLogger(tsid_solo.contact_frame_names, directory='/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
 
 data = tsid_solo.invdyn.data()
 robot = tsid_solo.robot
@@ -95,8 +95,8 @@ putting_foot_down = False
 
 prev_raised_foot_nb = 0
 raised_foot_nb = 0
-w_forceRef_big = 70*conf.w_forceRef
-w_forceRef_big_newcontact = 70*conf.w_forceRef
+w_forceRef_big = 100000*conf.w_forceRef
+w_forceRef_big_newcontact = 100000*conf.w_forceRef
 w_prev = conf.w_forceRef
 w_next = conf.w_forceRef
 x_prev = 0
@@ -123,18 +123,11 @@ while not end_traj:
         dist_shift = dist(pos_c, pos_c_goal)
         ramp_perc = 0.5
         dist_max_w_next_ramp = ramp_perc*dist_shift 
-        dist_min_w_prev_ramp = (0.8)*dist_shift
+        dist_min_w_prev_ramp = (0.6)*dist_shift
 
     if full_support:
         dist_to_goal = dist(pos_c[:2], pos_c_goal[:2])
-        # print()
-        # print('pos_c: ', pos_c)
         pos_c, vel_c, acc_c = compute_cos_traj(t_shift, amp_com, offset, freq_shift)
-        # print('pos_c: ', pos_c)
-        # print('pos_c_goal: ', pos_c_goal)
-        # if raised_foot_nb == 1:
-        #     print()
-        #     print(1/0)
 
         # foot force regularization
         if t_shift < SHIFT_DURATION:
@@ -162,9 +155,6 @@ while not end_traj:
         
         else:
             print('\n\n\n\nfull support else')
-            # Just in case
-            # tsid_solo.contacts[prev_raised_foot_nb].setRegularizationTaskWeightVector(conf.w_forceRef*np.ones(3))
-            # tsid_solo.contacts[raised_foot_nb].setRegularizationTaskWeightVector(conf.w_forceRef*np.ones(3))
 
             tsid_solo.remove_contact(raised_foot_nb)
             full_support = False
@@ -173,8 +163,6 @@ while not end_traj:
     if partial_support:
         offset = pos_init_lst[raised_foot_nb] - amp_lst[raised_foot_nb]                          
         pos_f, vel_f, acc_f = compute_cos_traj(t_partial, amp_lst[raised_foot_nb], offset, freq_partial)
-        # print('pos_init_lst[raised_foot_nb]: ', pos_init_lst[raised_foot_nb])
-        # print('pos_f: ', pos_f)
 
         tsid_solo.set_foot_3d_ref(pos_f, vel_f, acc_f, raised_foot_nb)
 
@@ -215,7 +203,6 @@ while not end_traj:
     logger.append_data_from_sol(t, q, v, dv, tsid_solo, sol)
 
     # integrate one step
-    # q, v = tsid_solo.integrate_dv(q, v, dv, dt)
     q, v = tsid_solo.integrate_dv_R3SO3(q, v, dv, dt)
     t += dt
     i += 1
@@ -232,7 +219,7 @@ while not end_traj:
 
 logger.set_data_lst_as_arrays()
 # logger.store_csv_trajs('solo_stamping', sep=' ', skip_free_flyer=True)
-# logger.store_mcapi_traj(tsid_solo, 'solo_stamping')
+logger.store_mcapi_traj(tsid_solo, 'solo_stamping')
 
 import matplotlib.pyplot as plt
 
