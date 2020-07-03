@@ -9,7 +9,7 @@ from traj_logger import TrajLogger
 dt = conf.dt
 
 tsid_solo = TsidWrapper(conf, viewer=True)
-logger = TrajLogger()
+logger = TrajLogger(tsid_solo.contact_frame_names, directory='/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
 
 data = tsid_solo.invdyn.data()
 robot = tsid_solo.robot

@@ -17,6 +17,8 @@ examples_dir = '/home/mfourmy/Documents/Phd_LAAS/data/trajs/'
 # file_name = 'sinY_waist.cs'
 # file_name = 'sinY_nowaist.cs'
 file_name = 'talos_sin_traj_R3SO3.cs'
+# file_name = 'talos_contact_switch_R3SO3.cs'
+
 
 # INTTYPE = 'preint'
 INTTYPE = 'direct'
@@ -45,6 +47,7 @@ print('traj dur (s): ', max_ts - min_ts)
 
 
 dt = 1e-3  # discretization timespan
+# dt = 1e-2  # discretization timespan
 t_arr   = np.arange(min_ts, max_ts, dt)
 q_arr   = np.array([q_traj(t) for t in t_arr])
 dq_arr  = np.array([dq_traj(t) for t in t_arr])
@@ -57,6 +60,7 @@ f_arr_lst = [np.array([f_traj_lst[i](t) for t in t_arr]) for i in range(len(cont
 # r_wrench_lst = [f12TOphi(f12) for f12 in f_arr_lst[1]]
 l_wrench_lst = f_arr_lst[0]
 r_wrench_lst = f_arr_lst[1]
+
 
 N = t_arr.shape[0]  # nb of discretized timestamps
 def clip(i):
@@ -150,7 +154,7 @@ for i in range(0,N):
     r_F = pin.Force(r_wrench_lst[i])
     q_static = q_arr[i,:].copy()
     q_static[:6] = 0
-    q_static[6] = 1  
+    q_static[6] = 1
     robot.forwardKinematics(q_static)  
     bTl = robot.framePlacement(q_static, contact_frame_ids[0])
     bTr = robot.framePlacement(q_static, contact_frame_ids[1])
@@ -164,16 +168,16 @@ for i in range(0,N):
     ##########################
     # CDL integration
     ##########################
-    cTl = pin.SE3(oRb_int@bRl, oRb_int@(b_p_bl - b_p_bc))
-    cTr = pin.SE3(oRb_int@bRr, oRb_int@(b_p_br - b_p_bc))
+    cTl = pin.SE3(oRb@bRl, oRb@(b_p_bl - b_p_bc))
+    cTr = pin.SE3(oRb@bRr, oRb@(b_p_br - b_p_bc))
 
     c_tot_wrench = cTl * l_F + cTr * r_F 
     c_tot_force = c_tot_wrench.linear
     c_tot_centr_mom = c_tot_wrench.angular
 
-    c_int = c_est_lst[-1] + dc_est_lst[-1]*dt + 0.5 * (c_tot_force/mass + gravity) * dt**2
-    dc_int = dc_est_lst[-1] + (c_tot_force/mass + gravity) * dt
-    Lc_int = Lc_est_lst[-1] + c_tot_centr_mom * dt
+    c_int = c_int + dc_int*dt + 0.5 * (c_tot_force/mass + gravity) * dt**2
+    dc_int = dc_int + (c_tot_force/mass + gravity) * dt
+    Lc_int = Lc_int + c_tot_centr_mom * dt
 
     ##########################
     # POV integration
@@ -206,7 +210,6 @@ for i in range(0,N):
         oRb_int = o_M_cur.rotation
         v_int = oRb_int @ cur_nu_int.linear
 
-    
     elif INTTYPE == 'pinocchio':
         ### INT IN SE3
         # q_int = pin.integrate(robot.model, q_int, dq_arr[i,:]*dt)
@@ -244,9 +247,9 @@ Lc_gtr_arr = np.array(Lc_gtr_lst)
 p_err_arr = p_est_arr - p_gtr_arr
 v_err_arr = v_est_arr - v_gtr_arr
 oRb_err_arr = np.array([pin.log3(oRb_est @ oRb_gtr.T) for oRb_est, oRb_gtr in zip(oRb_est_lst, oRb_gtr_lst)])
-c_err_arr = c_est_arr - c_gtr_arr
-dc_err_arr = dc_est_arr - dc_gtr_arr
-Lc_err_arr = Lc_est_arr - Lc_gtr_arr
+c_err_arr = c_est_arr - np.roll(c_gtr_arr,    0)
+dc_err_arr = dc_est_arr - np.roll(dc_gtr_arr, 0)
+Lc_err_arr = Lc_est_arr - np.roll(Lc_gtr_arr, 0)
 
 
 
@@ -265,9 +268,6 @@ print('Save figs in '+PATH)
 #######
 # PLOTS
 #######
-# errors
-# err_arr_lst = [p_err_arr, oRb_err_arr, v_err_arr]
-# fig_titles = ['P error', 'O error', 'V error']
 title_err_tpls = [
     ('P error', p_err_arr),
     ('O error', oRb_err_arr),
@@ -284,20 +284,15 @@ for fig_title, err_arr in title_err_tpls:
     fig.suptitle(fig_title)
     fig.savefig(PATH+fig_title+'.png')
 
-# ground truth vs est
-# est_arr_lst = [p_est_arr, o_est_arr, v_est_arr]
-# gtr_arr_lst = [p_gtr_arr, o_gtr_arr, v_gtr_arr]
-# fig_titles = ['P est vs gtr', 'O est vs gtr', 'V est vs gtr']
 
 title_est_gtr_tpls = [
-    # ('P est vs gtr', p_est_arr, p_gtr_arr),
-    # ('O est vs gtr', o_est_arr, o_gtr_arr),
-    # ('V est vs gtr', v_est_arr, v_gtr_arr),
-    # ('C est vs gtr', c_est_arr, c_gtr_arr),
-    # ('D est vs gtr', dc_est_arr, dc_gtr_arr),
-    # ('L est vs gtr', Lc_est_arr, Lc_gtr_arr),
+    ('P est vs gtr', p_est_arr, p_gtr_arr),
+    ('O est vs gtr', o_est_arr, o_gtr_arr),
+    ('V est vs gtr', v_est_arr, v_gtr_arr),
+    ('C est vs gtr', c_est_arr, c_gtr_arr),
+    ('D est vs gtr', dc_est_arr, dc_gtr_arr),
+    ('L est vs gtr', Lc_est_arr, Lc_gtr_arr),
 ]
-
 for fig_title, est_arr, gtr_arr in title_est_gtr_tpls:
     fig = plt.figure(fig_title)
     for axis, (axis_name, c) in enumerate(zip('xyz', 'rgb')):

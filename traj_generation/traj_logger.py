@@ -55,6 +55,7 @@ class TrajLogger:
             data['f{}'.format(i_foot)] = f        
         data['tau'] = tsidw.invdyn.getActuatorForces(sol)
 
+        # in advance of 1 dt wrt q and v
         data['c'] = tsidw.robot.com(tsidw.invdyn.data())
         data['dc'] = tsidw.robot.com_vel(tsidw.invdyn.data())
         data['ddc'] = tsidw.comTask.getAcceleration(dv)

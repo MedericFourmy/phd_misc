@@ -12,7 +12,9 @@ np.set_printoptions(precision=3, linewidth=200, suppress=True)
 LINE_WIDTH = 60
 
 N_SIMULATION = 10000             # number of time steps simulated
-dt = 0.001                      # controller time step
+dt = 1e-3                      # controller time step
+# N_SIMULATION = 1000             # number of time steps simulated
+# dt = 1e-2                      # controller time step
 
 lxp = 0.1                           # foot length in positive x direction
 lxn = 0.1                           # foot length in negative x direction

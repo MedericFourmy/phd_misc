@@ -9,7 +9,7 @@ from traj_logger import TrajLogger
 dt = conf.dt
 
 tsid_talos = TsidWrapper(conf, viewer=conf.VIEWER_ON)
-logger = TrajLogger()
+logger = TrajLogger(tsid_talos.contact_frame_names, '/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
 
 data = tsid_talos.invdyn.data()
 robot = tsid_talos.robot
@@ -50,7 +50,7 @@ for i in range(0, conf.N_SIMULATION):
         acc_RF = two_pi_f_squared_amp * (-np.cos(two_pi_f*(t-SHIFT_DURATION)))
         tsid_talos.set_foot_3d_ref(pos_RF, vel_RF, acc_RF, 1)
     
-    # dummy values, the com position trajectory is linear (bad)
+    # dummy values, the com position trajectory is just a linear interpolation (bad)
     # hence the control will lag behind. This is just for testing.
     vel_c = np.zeros(3)
     acc_c = np.zeros(3)    
@@ -69,7 +69,7 @@ for i in range(0, conf.N_SIMULATION):
     logger.append_data_from_sol(t, q, v, dv, tsid_talos, sol)
 
     # integrate one step
-    q, v = tsid_talos.integrate_dv(q, v, dv, dt)
+    q, v = tsid_talos.integrate_dv_R3SO3(q, v, dv, dt)
     t += dt
 
     if (i % conf.PRINT_N) == 0:
@@ -84,8 +84,8 @@ for i in range(0, conf.N_SIMULATION):
 
 
 logger.set_data_lst_as_arrays()
-# logger.store_csv_trajs('solo_stomping', sep=' ')
-# logger.store_mcapi_traj(tsid_talos, 'solo_stomping')
+# logger.store_csv_trajs('talos_contact_switch', sep=' ')
+logger.store_mcapi_traj(tsid_talos, 'talos_contact_switch_R3SO3')
 
 import matplotlib.pyplot as plt
 

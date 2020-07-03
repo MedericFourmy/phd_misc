@@ -8,7 +8,7 @@ from traj_logger import TrajLogger
 
 
 tsid_talos = TsidWrapper(conf, viewer=conf.VIEWER_ON)
-logger = TrajLogger('/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
+logger = TrajLogger(tsid_talos.contact_frame_names, '/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
 
 data = tsid_talos.invdyn.data()
 robot = tsid_talos.robot
