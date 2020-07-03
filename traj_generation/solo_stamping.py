@@ -34,8 +34,8 @@ def compute_other_feet(fnb, feet_nb):
     return [nb for nb in feet_nb if fnb != nb]
 
 def compute_traj_shift(pos_c, support_feet, shift_duration):
-    pos_goal = sum(pos_init_lst[i] for i in support_feet)/3
-    return np.linspace(pos_c[:2], pos_goal[:2], int(shift_duration/dt))
+    pos_c_goal = sum(pos_init_lst[i] for i in support_feet)/3
+    return np.linspace(pos_c[:2], pos_c_goal[:2], int(shift_duration/dt))
 
 def linear_interp(x, xa, xb, ya, yb):
     return ya + (x-xa)*(yb-ya)/(xb-xa)
@@ -46,16 +46,15 @@ def log_linear_interp(x, xa, xb, ya, yb):
 def dist(posa, posb):
     return np.linalg.norm(posa-posb)
 
-def compute_cos_traj(t, amp, freq):
+def compute_cos_traj(t, amp, offset, freq):
     # param for RF traj during "swing phase"
     two_pi_f             = 2*np.pi*freq   # movement frequencies along each axis
     two_pi_f_amp         = two_pi_f * amp                      # 2π function times amplitude function
     two_pi_f_squared_amp = two_pi_f * two_pi_f_amp             # 2π function times squared amplitude function
-    offset = pos_init_lst[raised_foot_nb] - amp                          
-    pos_f = offset + amp * np.cos(two_pi_f*(t_partial))
-    vel_f = two_pi_f_amp * (-np.sin(two_pi_f*(t_partial)))
-    acc_f = two_pi_f_squared_amp * (-np.cos(two_pi_f*(t_partial)))
-    return pos_f, vel_f, acc_f 
+    pos = offset + amp * np.cos(two_pi_f*(t))
+    vel = two_pi_f_amp * (-np.sin(two_pi_f*(t)))
+    acc = two_pi_f_squared_amp * (-np.cos(two_pi_f*(t)))
+    return pos, vel, acc
 
 
 SHIFT_DURATION = 3.0
@@ -69,10 +68,16 @@ amp_lst = [
     ]
 # req = np.array([0.2, 0.2, 0.2])
 # freq = np.ones(3)/PARTIAL_SUPPORT_DURATION
-freq = np.array([
+freq_partial = np.array([
     1/PARTIAL_SUPPORT_DURATION,
     1/PARTIAL_SUPPORT_DURATION,
     1/PARTIAL_SUPPORT_DURATION,
+])
+
+freq_shift = np.array([
+    1/(2*SHIFT_DURATION),
+    1/(2*SHIFT_DURATION),
+    1/(2*SHIFT_DURATION),
 ])
 
 # Init values
@@ -105,21 +110,34 @@ while not end_traj:
     # update end effector trajectory tasks based on state machine
     if new_shift:
         print('\n\n\n\nnew shift')
+        data = tsid_solo.invdyn.data()
+        pos_c = robot.com(data)
         support_feet = compute_other_feet(raised_foot_nb, feet_nb)
-        traj_shift = compute_traj_shift(pos_c, support_feet, SHIFT_DURATION)
+        pos_c_goal = sum(pos_init_lst[i] for i in support_feet)/3
+        pos_c_goal[2] = pos_c[2]  # keep z constant?
+        amp_com = -(pos_c_goal - pos_c)/2
+        offset = pos_c - amp_com
+
         new_shift = False
-        i_shift = 0
-        dist_shift = dist(traj_shift[0,:], traj_shift[-1,:])
+        t_shift = 0
+        dist_shift = dist(pos_c, pos_c_goal)
         ramp_perc = 0.5
         dist_max_w_next_ramp = ramp_perc*dist_shift 
         dist_min_w_prev_ramp = (0.8)*dist_shift
 
-
     if full_support:
-        pos_c[:2] = traj_shift[i_shift]
-        dist_to_goal = dist(pos_c[:2], traj_shift[-1,:])
+        dist_to_goal = dist(pos_c[:2], pos_c_goal[:2])
+        # print()
+        # print('pos_c: ', pos_c)
+        pos_c, vel_c, acc_c = compute_cos_traj(t_shift, amp_com, offset, freq_shift)
+        # print('pos_c: ', pos_c)
+        # print('pos_c_goal: ', pos_c_goal)
+        # if raised_foot_nb == 1:
+        #     print()
+        #     print(1/0)
 
-        if i_shift < traj_shift.shape[0]-1:
+        # foot force regularization
+        if t_shift < SHIFT_DURATION:
             # handle force regularization tasks weights for smooth transitions
             if (prev_raised_foot_nb != raised_foot_nb) and (dist_to_goal >= dist_min_w_prev_ramp):
                 #
@@ -140,7 +158,7 @@ while not end_traj:
                 w_next = linear_interp(x_next, 1, 0, w_forceRef_big, conf.w_forceRef)
                 tsid_solo.contacts[raised_foot_nb].setRegularizationTaskWeightVector(w_next*np.ones(3))
 
-            i_shift += 1
+            t_shift += dt
         
         else:
             print('\n\n\n\nfull support else')
@@ -153,7 +171,10 @@ while not end_traj:
             partial_support = True
             t_partial = 0
     if partial_support:
-        pos_f, vel_f, acc_f = compute_cos_traj(t, amp_lst[raised_foot_nb], freq)
+        offset = pos_init_lst[raised_foot_nb] - amp_lst[raised_foot_nb]                          
+        pos_f, vel_f, acc_f = compute_cos_traj(t_partial, amp_lst[raised_foot_nb], offset, freq_partial)
+        # print('pos_init_lst[raised_foot_nb]: ', pos_init_lst[raised_foot_nb])
+        # print('pos_f: ', pos_f)
 
         tsid_solo.set_foot_3d_ref(pos_f, vel_f, acc_f, raised_foot_nb)
 
@@ -179,8 +200,6 @@ while not end_traj:
 
     # dummy values, the com position trajectory is linear (bad)
     # hence the control will lag behind. This is just for testing.
-    vel_c = np.zeros(3)
-    acc_c = np.zeros(3)    
     tsid_solo.set_com_ref(pos_c, vel_c, acc_c)
 
     # Solve
@@ -212,8 +231,8 @@ while not end_traj:
 
 
 logger.set_data_lst_as_arrays()
-logger.store_csv_trajs('solo_stamping', sep=' ', skip_free_flyer=True)
-logger.store_mcapi_traj(tsid_solo, 'solo_stamping')
+# logger.store_csv_trajs('solo_stamping', sep=' ', skip_free_flyer=True)
+# logger.store_mcapi_traj(tsid_solo, 'solo_stamping')
 
 import matplotlib.pyplot as plt
 
