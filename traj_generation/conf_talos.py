@@ -23,7 +23,7 @@ lyn = 0.065                         # foot length in negative y direction
 lz = 0.107                          # foot sole height with respect to ankle joint
 mu = 0.3                            # friction coefficient
 fMin = 0.0                          # minimum normal force
-fMax = 1000.0                       # maximum normal force
+fMax = 2000.0                       # maximum normal force
 
 reference_config_q_name = 'half_sitting'
 

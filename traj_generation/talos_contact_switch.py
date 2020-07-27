@@ -5,6 +5,7 @@ import tsid
 from tsid_wrapper import TsidWrapper 
 import conf_talos as conf
 from traj_logger import TrajLogger
+from utils import linear_interp
 
 dt = conf.dt
 
@@ -16,7 +17,7 @@ robot = tsid_talos.robot
 
 
 # Params for Com trajectory
-SHIFT_DURATION = 3
+SHIFT_DURATION = 4
 posLF, _, _ = tsid_talos.get_3d_pos_vel_acc(np.zeros(3), 0)
 print(posLF)
 pos_com_init = robot.com(data)
@@ -32,6 +33,13 @@ two_pi_f             = 2*np.pi*np.array([0.2, 0.2, 0.2])   # movement frequencie
 two_pi_f_amp         = two_pi_f * amp                      # 2π function times amplitude function
 two_pi_f_squared_amp = two_pi_f * two_pi_f_amp             # 2π function times squared amplitude function
 
+w_forceRef_big = 100*conf.w_forceRef
+w_force = conf.w_forceRef
+shift_perc = 0.1
+tsid_talos.contacts[0].setRegularizationTaskWeightVector(w_force*np.ones(6))
+tsid_talos.contacts[1].setRegularizationTaskWeightVector(w_force*np.ones(6))
+print('w_force init: ', w_force)
+
 
 # Init values
 q, v = tsid_talos.q, tsid_talos.v
@@ -40,6 +48,9 @@ time_start = time.time()
 for i in range(0, conf.N_SIMULATION):
 
     # simple switch
+    if i > shift_perc*shift_traj.shape[0]:
+        w_force = linear_interp(i, shift_perc*shift_traj.shape[0], shift_traj.shape[0], conf.w_forceRef, w_forceRef_big)
+        tsid_talos.contacts[1].setRegularizationTaskWeightVector(w_force*np.ones(6))
     if i < shift_traj.shape[0]:
         pos_c[:2] = shift_traj[i]
     elif tsid_talos.active_contacts[1]:
@@ -85,7 +96,7 @@ for i in range(0, conf.N_SIMULATION):
 
 logger.set_data_lst_as_arrays()
 # logger.store_csv_trajs('talos_contact_switch', sep=' ')
-logger.store_mcapi_traj(tsid_talos, 'talos_contact_switch_R3SO3')
+logger.store_mcapi_traj(tsid_talos, 'talos_contact_switch')
 
 import matplotlib.pyplot as plt
 
