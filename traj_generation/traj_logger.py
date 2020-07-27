@@ -2,7 +2,12 @@ import os
 import numpy as np
 import pandas as pd
 import pinocchio as pin
-from multicontact_api import ContactSequence, ContactPhase, ContactPatch
+try:
+    mcapi_import = True
+    from multicontact_api import ContactSequence, ContactPhase, ContactPatch
+except ImportError:
+    mcapi_import = False
+    print('Cannot import multicontact_api, TrajLogger.store_mcapi_traj  will not work!!')
 from curves import piecewise
 
 class TrajLogger:
@@ -120,9 +125,13 @@ class TrajLogger:
         df_contact_names = pd.DataFrame(columns=self.data_log['contact_names'])
         df_contact_names.to_csv(os.path.join(self.directory, '{}_contact_names.dat'.format(traj_name)), sep=sep, index=False, header=True)
 
-        print('q, v, tau and contacts traj saved in: ', self.directory)
+        print('q, v, tau and contacts traj .dat files saved in: ', self.directory)
 
     def store_mcapi_traj(self, tsidw, traj_name):
+        if not mcapi_import:
+            print('multicontact_api package import has failed, check your install')
+            return
+            
         # trajectory with only one ContactPhase (simpler to read/write)
         # when feet not in contact, the force is exactly zero, that's the only diff
 
@@ -145,9 +154,6 @@ class TrajLogger:
         cp.dc_t = piecewise.FromPointsList(self.data_log['dc'].T, t_arr)
         cp.ddc_t = piecewise.FromPointsList(self.data_log['ddc'].T, t_arr)  # not needed
         cp.L_t = piecewise.FromPointsList(self.data_log['Lc'].T, t_arr)
-        # cp.wrench_t = wrench
-        # cp.zmp_t = zmp
-        # cp.root_t = root
 
         # contact force trajectories
         for i_foot, frame_name in enumerate(tsidw.contact_frame_names):

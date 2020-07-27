@@ -32,17 +32,19 @@ pos_com_init = robot.com(data)
 pos_c = pos_com_init.copy()
 
 
-SHIFT_DURATION = 3.0
-PARTIAL_SUPPORT_DURATION = 5.0
+# TRAJECTORY PARAMETERS
+SHIFT_DURATION = 3.0  # time to shift the COM from one support triangle barycentre to the next
+PARTIAL_SUPPORT_DURATION = 5.0  # time during which each foot is raised
 
+# amplitudes of the sinusoids followed by 
 amp_lst = [
-    np.array([0.02,  0.05, -0.05]),
-    np.array([0.02, -0.05, -0.05]),
-    np.array([0.02,  0.05, -0.05]),
-    np.array([0.02, -0.05, -0.05]),
+    np.array([0.0,  0.0, -0.05]),
+    np.array([0.0, -0.0, -0.05]),
+    np.array([0.0,  0.0, -0.05]),
+    np.array([0.0, -0.0, -0.05]),
     ]
-# req = np.array([0.2, 0.2, 0.2])
-# freq = np.ones(3)/PARTIAL_SUPPORT_DURATION
+
+# a full sinusoid on each axis 
 freq_partial = np.array([
     1/PARTIAL_SUPPORT_DURATION,
     1/PARTIAL_SUPPORT_DURATION,

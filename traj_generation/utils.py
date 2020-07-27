@@ -1,3 +1,5 @@
+import numpy as np
+
 def compute_other_feet(fnb, feet_nb):
     return [nb for nb in feet_nb if fnb != nb]
 

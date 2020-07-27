@@ -53,7 +53,7 @@ kp_posture = np.array(
 ).T 
 
 
-VIEWER_ON = False
+VIEWER_ON = True
 PRINT_N = 500                   # print every PRINT_N time steps
 DISPLAY_N = 20                  # update robot configuration in viwewer every DISPLAY_N time steps
 CAMERA_TRANSFORM = [0.016945913434028625, -2.2850289344787598, 0.3789125978946686,
