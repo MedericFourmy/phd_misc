@@ -12,7 +12,8 @@ from utils import *
 dt = conf.dt
 
 tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
-logger = TrajLogger(tsid_solo.contact_frame_names, directory='/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
+# logger = TrajLogger(tsid_solo.contact_frame_names, directory='/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
+logger = TrajLogger(tsid_solo.contact_frame_names, directory='temp_traj')
 
 data = tsid_solo.invdyn.data()
 robot = tsid_solo.robot
@@ -69,6 +70,7 @@ new_shift = True
 full_support = True
 partial_support = False
 putting_foot_down = False
+back_to_origin = False
 
 prev_raised_foot_nb = 0
 raised_foot_nb = 0
@@ -89,9 +91,13 @@ while not end_traj:
         print('\n\n\n\nnew shift')
         data = tsid_solo.invdyn.data()
         pos_c = robot.com(data)
-        support_feet = compute_other_feet(raised_foot_nb, feet_nb)
-        pos_c_goal = sum(pos_init_lst[i] for i in support_feet)/3
-        pos_c_goal[2] = pos_c[2]  # keep z constant?
+        if back_to_origin:
+            pos_c_goal = pos_com_init
+        else:    
+            support_feet = compute_other_feet(raised_foot_nb, feet_nb)
+            pos_c_goal = sum(pos_init_lst[i] for i in support_feet)/3
+            pos_c_goal[2] = pos_c[2]  # keep z constant?
+        
         amp_com = -(pos_c_goal - pos_c)/2
         offset = pos_c - amp_com
 
@@ -120,7 +126,8 @@ while not end_traj:
                 w_prev = linear_interp(x_prev, 1, 0, w_forceRef_big_newcontact, conf.w_forceRef)
                 tsid_solo.contacts[prev_raised_foot_nb].setRegularizationTaskWeightVector(w_prev*np.ones(3))
 
-            if dist_to_goal <= dist_max_w_next_ramp:
+            # lower le weight of the next foot to raise
+            if not back_to_origin and (dist_to_goal <= dist_max_w_next_ramp):
                 #
                 # w_next = linear_interp(dist_to_goal, dist_max_w_next_ramp, 0, conf.w_forceRef, w_forceRef_big)
                 #
@@ -133,11 +140,17 @@ while not end_traj:
         else:
             print('\n\n\n\nfull support else')
 
-            tsid_solo.remove_contact(raised_foot_nb)
             full_support = False
             partial_support = True
             t_partial = 0
-    if partial_support:
+            
+            if back_to_origin:
+                end_traj = True
+            else:
+                tsid_solo.remove_contact(raised_foot_nb)
+
+
+    if partial_support and not end_traj:
         offset = pos_init_lst[raised_foot_nb] - amp_lst[raised_foot_nb]                          
         pos_f, vel_f, acc_f = compute_cos_traj(t_partial, amp_lst[raised_foot_nb], offset, freq_partial)
 
@@ -155,8 +168,7 @@ while not end_traj:
             full_support = True
             
             if raised_foot_nb > 3:
-                end_traj = True
-
+                back_to_origin = True
 
     w_prev_arr.append(w_prev)
     w_next_arr.append(w_next)
@@ -195,8 +207,8 @@ while not end_traj:
 
 
 logger.set_data_lst_as_arrays()
-# logger.store_csv_trajs('solo_stamping', sep=' ', skip_free_flyer=True)
-logger.store_mcapi_traj(tsid_solo, 'solo_stamping')
+logger.store_csv_trajs('solo_stamping', sep=' ', skip_free_flyer=True)
+# logger.store_mcapi_traj(tsid_solo, 'solo_stamping')
 
 import matplotlib.pyplot as plt
 
