@@ -14,3 +14,8 @@ __pycache__/
 *.jpg
 *.jpeg
 *.gif
+
+# data/figs
+centroidalkin/data
+centroidalkin/figs
+
