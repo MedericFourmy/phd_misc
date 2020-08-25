@@ -5,9 +5,10 @@ import subprocess
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from experiment_naming import dirname_from_params
 
 # number of experiments
-N = 5
+N = 20
 nb_sig = 3
 df_kfs_lst = []
 df_cov_lst = []
@@ -15,8 +16,8 @@ df_gtr_kfs_lst = []
 
 SAVE_FIGURES = True
 FIG_DIR_PATH = 'figs/MC/'
-SUB_DIR = 'test/'       # ! change for each new experiment
-PATH = FIG_DIR_PATH + SUB_DIR
+SUB_DIR = dirname_from_params('/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/demos/mcapi_povcdl_estimation.yaml')
+PATH = FIG_DIR_PATH + SUB_DIR + "/"
 if not os.path.exists(PATH):
     os.makedirs(PATH)
 
@@ -44,7 +45,7 @@ names = ['P', 'V', 'C', 'D', 'L', 'B']
 prefixes = ['p', 'v', 'c', 'cd', 'L', 'bp']
 
 for name, pre in zip(names, prefixes):
-    fig = plt.figure(name+' estimates')
+    fig = plt.figure(name+' errors')
     plt.title(name+' estimates+cov')
     legend_printed = False
     for i in range(N):
@@ -55,6 +56,8 @@ for name, pre in zip(names, prefixes):
         if not legend_printed:
             plt.legend()
             legend_printed = True
+    
+    # Not necessary to print uncertainty bounds for all runs (almost all the sames), just recover the last one
     sig_xx = np.sqrt(df_cov_lst[i]['Q'+pre+'x'])
     sig_yy = np.sqrt(df_cov_lst[i]['Q'+pre+'y'])
     sig_zz = np.sqrt(df_cov_lst[i]['Q'+pre+'z'])
@@ -64,11 +67,14 @@ for name, pre in zip(names, prefixes):
     plt.plot(df_cov_lst[i]['t'],  nb_sig*sig_yy, alpha=0.3, c='g')
     plt.plot(df_cov_lst[i]['t'], -nb_sig*sig_zz, alpha=0.3, c='b')
     plt.plot(df_cov_lst[i]['t'],  nb_sig*sig_zz, alpha=0.3, c='b')
-
-
-if SAVE_FIGURES:
-    file_path = PATH+'biases_errs_sigmas.png' 
+    file_path = PATH+name+'.png' 
     fig.savefig(file_path)
     print('Saved '+file_path)
+
+
+# if SAVE_FIGURES:
+#     file_path = PATH+'biases_errs_sigmas.png' 
+#     fig.savefig(file_path)
+#     print('Saved '+file_path)
 
 plt.show()
