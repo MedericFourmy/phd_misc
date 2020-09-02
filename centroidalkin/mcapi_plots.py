@@ -8,10 +8,12 @@ import pandas as pd
 import subprocess
 import matplotlib.pyplot as plt
 import pinocchio as pin
-from experiment_naming import dirname_from_params
+from experiment_naming import dirname_from_params_path
 
 
 # Select plots to activate
+RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/mcapi_povcdl_estimation'
+PARAM_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/demos/mcapi_povcdl_estimation.yaml'
 RUN_SIMULATION =        True
 ERROR_BASE =            True    
 ERROR_COM_AM_BIAS =     True
@@ -23,14 +25,15 @@ PLOT_SHOW =             True
 # Saving figures
 SAVE_FIGURES = True
 FIG_DIR_PATH = 'figs/oneshot/'
-SUB_DIR = dirname_from_params('/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/demos/mcapi_povcdl_estimation.yaml')
+# SUB_DIR = dirname_from_params_path(PARAM_FILE)
+SUB_DIR = 'test'
 PATH = FIG_DIR_PATH + SUB_DIR + "/"
 if not os.path.exists(PATH):
     os.makedirs(PATH)
 
 if RUN_SIMULATION:
     t1 = time.time()
-    subprocess.run('/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/mcapi_povcdl_estimation', stdout=subprocess.DEVNULL)
+    subprocess.run(RUN_FILE, stdout=subprocess.DEVNULL)
     print('time: ', time.time()-t1)
 
 df_gtr = pd.read_csv('gtr.csv')

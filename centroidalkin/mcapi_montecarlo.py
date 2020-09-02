@@ -5,7 +5,7 @@ import subprocess
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from experiment_naming import dirname_from_params
+from experiment_naming import dirname_from_params_path
 
 # number of experiments
 N = 20
@@ -16,7 +16,7 @@ df_gtr_kfs_lst = []
 
 SAVE_FIGURES = True
 FIG_DIR_PATH = 'figs/MC/'
-SUB_DIR = dirname_from_params('/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/demos/mcapi_povcdl_estimation.yaml')
+SUB_DIR = dirname_from_params_path('/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/demos/mcapi_povcdl_estimation.yaml')
 PATH = FIG_DIR_PATH + SUB_DIR + "/"
 if not os.path.exists(PATH):
     os.makedirs(PATH)
