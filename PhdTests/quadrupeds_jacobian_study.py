@@ -10,7 +10,7 @@ from multicontact_api import ContactSequence
 
 
 
-examples_dir = '/home/mfourmy/Documents/Phd_LAAS/tests/centroidalkin/data/multicontact-api-master-examples/examples/ANYMAL/'
+examples_dir = '/home/mfourmy/Documents/Phd_LAAS/phd_misc/centroidalkin/data/multicontact-api-master-examples/examples/quadrupeds/'
 file_name = 'anymal_walk_WB.cs'
 
 
