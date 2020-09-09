@@ -60,9 +60,8 @@ for i in range(0, conf.N_SIMULATION):
         tsid_talos.update_display(q, t)
         time_start = time.time()
 
-logger.set_data_lst_as_arrays()
 # logger.store_csv_trajs('talos_sin_traj', sep=' ')
-logger.store_mcapi_traj(tsid_talos, 'talos_sin_traj_R3SO3')
+logger.store_mcapi_traj('talos_sin_traj_R3SO3')
 
 import matplotlib.pyplot as plt
 

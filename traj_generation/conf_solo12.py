@@ -17,7 +17,8 @@ fMax = 500.0                       # maximum normal force
 
 reference_config_q_name = 'standing'
 
-contact_frame_names = ['HR_FOOT', 'HL_FOOT', 'FR_FOOT', 'FL_FOOT']
+# contact_frame_names = ['HR_FOOT', 'HL_FOOT', 'FR_FOOT', 'FL_FOOT']
+contact_frame_names = ['HR_ANKLE', 'HL_ANKLE', 'FR_ANKLE', 'FL_ANKLE']  # same thing as XX_FOOT but contained in pybullet
 contact6d = False
 useLocalFrame = True
 contactNormal = np.array([0., 0., 1.])       # direction of the normal to the contact surface
@@ -26,7 +27,7 @@ priority_com = 0  # if set to 1, w_com has to be orders of magnitude above other
 priority_foot = 1
 priority_posture = 1
 priority_forceRef = 1
-priority_waist = 1
+priority_trunk = 1
 priority_torque_bounds = 0
 priority_joint_bounds = 0
 
@@ -34,14 +35,14 @@ w_com = 10.0                       # weight of center of mass task
 w_foot = 10                        # weight of the foot motion task
 w_posture = 1e-1                  # weight of joint posture task
 w_forceRef = 1e-3                 # weight of force regularization task
-w_waist = 1.0                     # weight of waist task
-w_torque_bounds = 1.0             # weight of the torque bounds
-w_joint_bounds = 0.0
+w_trunk = 1.0                     # weight of trunk task
+# w_torque_bounds = 1.0             # weight of the torque bounds
+# w_joint_bounds = 0.0
 
 kp_contact = 30.0                 # proportional gain of contact constraint
 kp_foot = 10000.0                    # proportional gain of contact constraint
 kp_com = 20.0                     # proportional gain of center of mass task               
-kp_waist = 500.0                  # proportional gain of waist task
+kp_trunk = 500.0                  # proportional gain of trunk task
 
 kd_com = 2.0 * np.sqrt(kp_com)
 

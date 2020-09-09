@@ -27,8 +27,8 @@ GVIEWER_DISPLAY_TRAJ = False
 STORE_TRAJ = True
 SHOW_PLOTS = False
 TRAJ_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/general_phd_repo/centroidalkin/data/tsid_gen/'
-OUTPUT_FILE_NAME = 'sinY_nowaist.cs'
-WAIST_TASK = False
+OUTPUT_FILE_NAME = 'sinY_notrunk.cs'
+trunk_TASK = False
 
 
 #############################
@@ -51,11 +51,11 @@ contactNormal = np.array([0., 0., 1.])       # direction of the normal to the co
 w_com = 1.0                       # weight of center of mass task
 w_posture = 0.1                   # weight of joint posture task
 w_forceRef = 1e-3                 # weight of force regularization task
-w_waist = 1.0                     # weight of waist task
+w_trunk = 1.0                     # weight of trunk task
 
 kp_contact = 30.0                 # proportional gain of contact constraint
 kp_com = 20.0                     # proportional gain of center of mass task               
-kp_waist = 500.0                  # proportional gain of waist task
+kp_trunk = 500.0                  # proportional gain of trunk task
 
 kp_posture = np.array(                                    # proportional gain of joint posture task
     [ 10. ,  5.  , 5. , 1. ,  1. ,  10.,                  # lleg  #low gain on axis along y and knee
@@ -129,7 +129,7 @@ data = invdyn.data()
 # In this exercise, for the equilibrium of the CoM, we need 3 task motions:
 # 
 #  - **TaskComEquality** as **constraint of the control** (priority level = 0) to maintain the equilibrium of the CoM (by following a reference trajectory). It is the most important task so has a weight of 1 (in constraint scope).
-#  - **TaskSE3Equality** in the **cost function** (priority level = 1) for the waist of the robot, to maintain its orientation (with a reference trajectory). It is an important task so has a weight of 1 (in cost function scope).
+#  - **TaskSE3Equality** in the **cost function** (priority level = 1) for the trunk of the robot, to maintain its orientation (with a reference trajectory). It is an important task so has a weight of 1 (in cost function scope).
 #  - **TaskJointPosture** in the **cost function** (priority level = 1) for the posture of the robot, to maintain it to half-sitting (with a reference trajectory). It is the less important task so has a weight of 0.1 (in cost function scope).
 
 
@@ -141,20 +141,20 @@ comTask.setKd(2.0 * np.sqrt(kp_com) * np.ones(3)) # Derivative gain = 2 * sqrt(2
 invdyn.addMotionTask(comTask, w_com, 0, 0.0)
 
 
-# WAIST Task
-waistTask = tsid.TaskSE3Equality("keepWaist", robot, 'root_joint') # waist -> root_joint
-waistTask.setKp(kp_waist * np.ones(6)) # Proportional gain defined before = 500
-waistTask.setKd(2.0 * np.sqrt(kp_waist) * np.ones(6)) # Derivative gain = 2 * sqrt(500), critical damping
+# trunk Task
+trunkTask = tsid.TaskSE3Equality("keeptrunk", robot, 'root_joint') # trunk -> root_joint
+trunkTask.setKp(kp_trunk * np.ones(6)) # Proportional gain defined before = 500
+trunkTask.setKd(2.0 * np.sqrt(kp_trunk) * np.ones(6)) # Derivative gain = 2 * sqrt(500), critical damping
 
 # Add a Mask to the task which will select the vector dimensions on which the task will act.
-# In this case the waist configuration is a vector 6d (position and orientation -> SE3)
-# Here we set a mask = [0 0 0 1 1 1] so the task on the waist will act on the orientation of the robot
+# In this case the trunk configuration is a vector 6d (position and orientation -> SE3)
+# Here we set a mask = [0 0 0 1 1 1] so the task on the trunk will act on the orientation of the robot
 mask = np.ones(6)
 mask[:3] = 0.
-waistTask.setMask(mask)
+trunkTask.setMask(mask)
 # Add the task to the HQP with weight = 1.0, priority level = 1 (in the cost function) and a transition duration = 0.0
-if WAIST_TASK:
-    invdyn.addMotionTask(waistTask, w_waist, 1, 0.0)
+if trunk_TASK:
+    invdyn.addMotionTask(trunkTask, w_trunk, 1, 0.0)
 
 
 # POSTURE Task
@@ -210,7 +210,7 @@ invdyn.addRigidContact(contactLF, w_forceRef)
 # For standard use in control, the method *compute_next* is provided, which computes the value of the trajectory at the next time step.
 # 
 # In the example, we need to set 3 trajectories, one for each task. 
-# These trajectories will give at each time step the desired position, velocity and acceleration of the different tasks (CoM, posture and waist).
+# These trajectories will give at each time step the desired position, velocity and acceleration of the different tasks (CoM, posture and trunk).
 # In our case they will be constants, equal to their initial values.
 # 
 
@@ -225,10 +225,10 @@ sampleCom = trajCom.computeNext() # Compute the first step of the trajectory fro
 qa_ref = q[7:] # Initial value of the joints of the robot (in halfSitting position without the freeFlyer (6 first values))
 trajPosture = tsid.TrajectoryEuclidianConstant("traj_joint", qa_ref)
 
-waist_ref = robot.position(data, model.getJointId('root_joint')) # Initial value of the waist (root_joint)
-# Here the waist is defined as a 6d vector (position + orientation) so it is in the SE3 group (Lie group)
+trunk_ref = robot.position(data, model.getJointId('root_joint')) # Initial value of the trunk (root_joint)
+# Here the trunk is defined as a 6d vector (position + orientation) so it is in the SE3 group (Lie group)
 # Thus, the trajectory is not Euclidian but remains in the SE3 domain -> TrajectorySE3Constant
-trajWaist = tsid.TrajectorySE3Constant("traj_waist", waist_ref)
+trajtrunk = tsid.TrajectorySE3Constant("traj_trunk", trunk_ref)
 
 
 
@@ -313,8 +313,8 @@ for i in range(0, N_SIMULATION):
     samplePosture = trajPosture.computeNext()
     postureTask.setReference(samplePosture)
     
-    sampleWaist = trajWaist.computeNext()
-    waistTask.setReference(sampleWaist)
+    sampletrunk = trajtrunk.computeNext()
+    trunkTask.setReference(sampletrunk)
 
     HQPData = invdyn.computeProblemData(t, q, v)
 

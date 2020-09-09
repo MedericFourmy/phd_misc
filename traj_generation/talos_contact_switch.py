@@ -94,9 +94,8 @@ for i in range(0, conf.N_SIMULATION):
 
 
 
-logger.set_data_lst_as_arrays()
 # logger.store_csv_trajs('talos_contact_switch', sep=' ')
-logger.store_mcapi_traj(tsid_talos, 'talos_contact_switch')
+logger.store_mcapi_traj('talos_contact_switch')
 
 import matplotlib.pyplot as plt
 
