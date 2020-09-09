@@ -7,30 +7,45 @@ import conf_solo12 as conf
 from traj_logger import TrajLogger
 
 dt = conf.dt
-
 tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
 logger = TrajLogger(tsid_solo.contact_frame_names, directory='/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
 
-data = tsid_solo.invdyn.data()
 robot = tsid_solo.robot
+model = tsid_solo.model
+data = tsid_solo.invdyn.data()
+q, v = tsid_solo.q, tsid_solo.v
 
 # Params for Com trajectory
-amp        = np.array([-0.02, 0.02, 0.02])                    # amplitude functio
-# amp        = np.array([0.0, 0.0, 0.03])                    # amplitude functio
-offset     = robot.com(data) - amp                         # offset of the mesured CoM 
+# amp        = np.array([-0.02, 0.02, 0.02])                 # amplitude of com mvt
+amp        = np.array([0.0, 0.0, 0.0])                  # amplitude of com mvt
+offset     = robot.com(data) - amp                         # offset of the measured CoM 
 two_pi_f             = 2*np.pi*np.array([0.2, 0.4, 0.2])   # movement frequencies along each axis
 two_pi_f_amp         = two_pi_f * amp                      # 2π function times amplitude function
 two_pi_f_squared_amp = two_pi_f * two_pi_f_amp             # 2π function times squared amplitude function
 
+# Params for trunk orientation trajectory
+amp_trunk = np.deg2rad(np.array([30, 0.0, 0.0]))   # orientation, numbers in degrees
+two_pi_f_trunk     = 2*np.pi*np.array([0.2, 0.2, 0.2])  # movement frequencies along each axis
+R_trunk_init = robot.framePosition(data, tsid_solo.trunk_link_id).rotation
+print('R_trunk_init')
+print(R_trunk_init)
+
+
 # Init values
-q, v = tsid_solo.q, tsid_solo.v
 t = 0.0 # time
 time_start = time.time()
 for i in range(0, conf.N_SIMULATION):
+    # set com ref
     pos_c = offset + amp * np.cos(two_pi_f*t)
     vel_c = two_pi_f_amp * (-np.sin(two_pi_f*t))
     acc_c = two_pi_f_squared_amp * (-np.cos(two_pi_f*t))
     tsid_solo.set_com_ref(pos_c, vel_c, acc_c)
+
+    # set trunk ref
+    init_rpy_curr = amp_trunk * np.sin(two_pi_f_trunk*t)
+    init_R_curr = pin.rpy.rpyToMatrix(*init_rpy_curr)
+    R_trunk = R_trunk_init @ init_R_curr
+    tsid_solo.set_trunk_ref(R_trunk)
 
     # Solve
     sol, HQdata = tsid_solo.compute_and_solve(t, q, v)
@@ -59,10 +74,9 @@ for i in range(0, conf.N_SIMULATION):
         time_start = time.time()
 
 
-
-logger.set_data_lst_as_arrays()
 # logger.store_csv_trajs('solo_sin_traj', sep=' ')
-logger.store_mcapi_traj(tsid_solo, 'solo_sin_traj')
+# logger.store_mcapi_traj('solo_sin_traj')
+logger.store_mcapi_traj('solo_sin_roll')
 
 import matplotlib.pyplot as plt
 

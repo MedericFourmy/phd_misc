@@ -48,6 +48,11 @@ class TsidWrapper:
 
         robot.computeAllTerms(data, q, v)
 
+
+        #####################################
+        # define contact and associated tasks
+        #####################################
+
         self.contact_frame_ids = [self.model.getFrameId(frame_name) for frame_name in self.contact_frame_names]
         self.nc = len(self.contact_frame_ids)  # contact number
 
@@ -97,29 +102,35 @@ class TsidWrapper:
             self.traj_feet[i_foot] = tsid.TrajectorySE3Constant('traj-foot{}'.format(i_foot), Hf_ref)
             self.sample_feet[i_foot] = self.traj_feet[i_foot].computeNext()
 
+
+        #############
+        # Other tasks
+        #############
+
         # COM TASK
-        comTask = tsid.TaskComEquality('task-com', robot)
-        comTask.setKp(conf.kp_com * np.ones(3))
-        comTask.setKd(2.0 * np.sqrt(conf.kp_com) * np.ones(3))
-        invdyn.addMotionTask(comTask, conf.w_com, conf.priority_com, 1.0)
+        self.comTask = tsid.TaskComEquality('task-com', robot)
+        self.comTask.setKp(conf.kp_com * np.ones(3))
+        self.comTask.setKd(2.0 * np.sqrt(conf.kp_com) * np.ones(3))
+        invdyn.addMotionTask(self.comTask, conf.w_com, conf.priority_com, 1.0)
 
         # POSTURE TASK
-        postureTask = tsid.TaskJointPosture('task-posture', robot)
-        postureTask.setKp(conf.kp_posture * np.ones(robot.nv-6))
-        postureTask.setKd(2.0 * np.sqrt(conf.kp_posture) * np.ones(robot.nv-6))
-        invdyn.addMotionTask(postureTask, conf.w_posture, conf.priority_posture, 0.0)
+        self.postureTask = tsid.TaskJointPosture('task-posture', robot)
+        self.postureTask.setKp(conf.kp_posture * np.ones(robot.nv-6))
+        self.postureTask.setKd(2.0 * np.sqrt(conf.kp_posture) * np.ones(robot.nv-6))
+        invdyn.addMotionTask(self.postureTask, conf.w_posture, conf.priority_posture, 0.0)
 
-        # # WAIST Task
-        # waistTask = tsid.TaskSE3Equality("keepWaist", robot, 'root_joint') # waist -> root_joint
-        # waistTask.setKp(conf.kp_waist * np.ones(6)) # Proportional gain defined before = 500
-        # waistTask.setKd(2.0 * np.sqrt(conf.kp_waist) * np.ones(6)) # Derivative gain = 2 * sqrt(500), critical damping
-        # # Add a Mask to the task which will select the vector dimensions on which the task will act.
-        # # In this case the waist configuration is a vector 6d (position and orientation -> SE3)
-        # # Here we set a mask = [0 0 0 1 1 1] so the task on the waist will act on the orientation of the robot
-        # mask = np.ones(6)
-        # # mask[:3] = 0.
-        # waistTask.setMask(mask)
-        # invdyn.addMotionTask(waistTask, conf.w_waist, conf.priority_waist, 0.0)
+        # TRUNK Task
+        self.trunkTask = tsid.TaskSE3Equality("keepTrunk", robot, 'root_joint') 
+        self.trunkTask.setKp(conf.kp_trunk * np.ones(6))
+        self.trunkTask.setKd(2.0 * np.sqrt(conf.kp_trunk) * np.ones(6))
+        # Add a Mask to the task which will select the vector dimensions on which the task will act.
+        # In this case the trunk configuration is a vector 6d (position and orientation -> SE3)
+        # Here we set a mask = [0 0 0 1 1 1] so the task on the trunk will act on the orientation of the robot
+        mask = np.ones(6)
+        mask[:3] = 0.
+        self.trunkTask.useLocalFrame(False)
+        self.trunkTask.setMask(mask)
+        invdyn.addMotionTask(self.trunkTask, conf.w_trunk, conf.priority_trunk, 0.0)
         
         # TORQUE BOUND TASK
         # self.tau_max = conf.tau_max_scaling*robot.model().effortLimit[-robot.na:]
@@ -137,13 +148,10 @@ class TsidWrapper:
         # if(conf.w_joint_bounds>0.0):
         #     invdyn.addMotionTask(jointBoundsTask, conf.w_joint_bounds, conf.priority_joint_bounds, 0.0)
         
-        com_ref = robot.com(data)
-        self.trajCom = tsid.TrajectoryEuclidianConstant('traj_com', com_ref)
-        self.sample_com = self.trajCom.computeNext()
-        
-        q_ref = q[7:]
-        self.trajPosture = tsid.TrajectoryEuclidianConstant('traj_joint', q_ref)
-        postureTask.setReference(self.trajPosture.computeNext())
+
+        ##################################
+        # Init task reference trajectories
+        ##################################
         
         self.sample_feet = self.nc*[None]
         self.sample_feet_pos = self.nc*[None]
@@ -154,14 +162,31 @@ class TsidWrapper:
             self.sample_feet_pos[i_foot] = self.sample_feet[i_foot].pos()
             self.sample_feet_vel[i_foot] = self.sample_feet[i_foot].vel()
             self.sample_feet_acc[i_foot] = self.sample_feet[i_foot].acc()
+
+        com_ref = robot.com(data)
+        self.trajCom = tsid.TrajectoryEuclidianConstant('traj_com', com_ref)
+        self.sample_com = self.trajCom.computeNext()
         
+        q_ref = q[7:]
+        self.trajPosture = tsid.TrajectoryEuclidianConstant('traj_joint', q_ref)
+        self.postureTask.setReference(self.trajPosture.computeNext())
+        
+        self.trunk_link_id = self.model.getFrameId('base_link')
+        R_trunk_init = robot.framePosition(data, self.trunk_link_id).rotation
+        self.trunk_ref = self.robot.framePosition(data, self.trunk_link_id)
+        self.trajTrunk = tsid.TrajectorySE3Constant("traj_base_link", self.trunk_ref)
+        self.sample_trunk = self.trajTrunk.computeNext()
+        pos_trunk = np.hstack([np.zeros(3), R_trunk_init.flatten()])
+        self.sample_trunk.pos()
+        self.sample_trunk.vel(np.zeros(6))
+        self.sample_trunk.acc(np.zeros(6))
+        self.trunkTask.setReference(self.sample_trunk)
+
+
+
         self.solver = tsid.SolverHQuadProgFast('qp solver')
         self.solver.resize(invdyn.nVar, invdyn.nEq, invdyn.nIn)
         
-        self.comTask = comTask
-        self.postureTask = postureTask
-        # self.actuationBoundsTask = actuationBoundsTask
-        # self.jointBoundsTask = jointBoundsTask
         self.invdyn = invdyn
         self.q = q
         self.v = v
@@ -260,6 +285,11 @@ class TsidWrapper:
         self.sample_com.vel(vel)
         self.sample_com.acc(acc)
         self.comTask.setReference(self.sample_com)
+    
+    def set_trunk_ref(self, R):
+        pos = np.hstack([np.zeros(3), R.flatten()])
+        self.sample_trunk.pos(pos)
+        self.trunkTask.setReference(self.sample_trunk)
         
     def set_foot_3d_ref(self, pos, vel, acc, i):
         self.sample_feet_pos[i][:3] = pos
