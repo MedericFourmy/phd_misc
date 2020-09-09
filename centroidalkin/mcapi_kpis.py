@@ -4,6 +4,7 @@
 import os
 import time
 import yaml
+import shutil
 import numpy as np
 import pandas as pd
 import subprocess
@@ -14,16 +15,18 @@ from experiment_naming import dirname_from_params
 def rmse(err_arr):
     return np.sqrt(np.mean(err_arr**2))
 
-SCALE_DIST = 0.01
-MASS_DIST = False
-PLOT = True
+SCALE_DIST = 0.1
+MASS_DIST = True
+PLOT = False
 
 # Select plots to activate
 RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/mcapi_povcdl_estimation'
 PARAM_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/demos/mcapi_povcdl_estimation.yaml'
+PARAM_FILE_BK = PARAM_FILE+'_bk'
 
 FIG_DIR_PATH = 'figs/metrics/'
 
+shutil.copyfile(PARAM_FILE, PARAM_FILE_BK)
 with open(PARAM_FILE, 'r') as fr:
     params = yaml.safe_load(fr)
 params['scale_dist']    = SCALE_DIST
@@ -159,6 +162,8 @@ df_maxe = pd.DataFrame(maxe_lst, columns=cols, index=index)
 print(df_rmse)
 print(df_maxe)
 
+shutil.move(PARAM_FILE_BK, PARAM_FILE)
+
 rmse_path = PATH+'rmse.csv'
 maxe_path = PATH+'maxe.csv'
 df_rmse.to_csv(rmse_path)
@@ -167,4 +172,4 @@ df_maxe.to_csv(maxe_path)
 
 if PLOT:
     from mcapi_kpis_plot import plot_kpi_heatmaps
-    plot_kpi_heatmaps(rmse_path, maxe_path)
+    plot_kpi_heatmaps(rmse_path, maxe_path, SCALE_DIST, MASS_DIST)

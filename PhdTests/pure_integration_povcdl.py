@@ -14,8 +14,8 @@ from wolf_preint import *
 examples_dir = '/home/mfourmy/Documents/Phd_LAAS/data/trajs/'
 # examples_dir = ''
 # file_name = 'sinY_nomove.cs'
-# file_name = 'sinY_waist.cs'
-# file_name = 'sinY_nowaist.cs'
+# file_name = 'sinY_trunk.cs'
+# file_name = 'sinY_notrunk.cs'
 file_name = 'talos_sin_traj_R3SO3.cs'
 # file_name = 'talos_contact_switch_R3SO3.cs'
 

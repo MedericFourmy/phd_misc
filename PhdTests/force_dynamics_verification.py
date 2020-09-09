@@ -26,7 +26,7 @@ else:
     DIMF = 6  # humanoid feet -> 6D wrench
     robot = loadTalos()
     # examples_dir = '/home/mfourmy/Documents/Phd_LAAS/tests/centroidalkin/data/tsid_gen/'
-    # file_name = 'sinY_nowaist.cs'
+    # file_name = 'sinY_notrunk.cs'
 
     examples_dir = '/home/mfourmy/Documents/Phd_LAAS/tests/centroidalkin/data/multicontact-api-master-examples/examples/'
     file_name = 'com_motion_above_feet_WB.cs'
