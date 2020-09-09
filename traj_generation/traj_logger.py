@@ -17,8 +17,8 @@ class TrajLogger:
             't': [],  # time trajectory
             'q': [],  # configuration position trajectory
             'v': [],   # configuration velocity trajectory
-            'contact_names': contact_names
             }
+        self.contact_names = contact_names
         self.directory = directory
 
     def append_data(self, data_dic):
@@ -63,7 +63,6 @@ class TrajLogger:
         # in advance of 1 dt wrt q and v
         data['c'] = tsidw.robot.com(tsidw.invdyn.data())
         data['dc'] = tsidw.robot.com_vel(tsidw.invdyn.data())
-        data['ddc'] = tsidw.comTask.getAcceleration(dv)
         data['Lc'] = pin.computeCentroidalMomentum(tsidw.robot.model(), tsidw.robot.data(), q, v).angular
         data['contacts'] = np.array([tsidw.invdyn.checkContact(contact.name, sol) for contact in tsidw.contacts])
 
@@ -74,10 +73,7 @@ class TrajLogger:
             self.data_log[key] = np.array(self.data_log[key])
     
     def store_csv_trajs(self, traj_name, sep, skip_free_flyer=True, time_sec=False):
-        if isinstance(self.data_log['q'], list): self.data_log['q'] = np.array(self.data_log['q']) 
-        if isinstance(self.data_log['v'], list): self.data_log['v'] = np.array(self.data_log['v']) 
-        if isinstance(self.data_log['tau'], list): self.data_log['tau'] = np.array(self.data_log['tau']) 
-        if isinstance(self.data_log['contacts'], list): self.data_log['contacts'] = np.array(self.data_log['contacts']) 
+        self.set_data_lst_as_arrays()
         q_traj = self.data_log['q'].copy()
         v_traj = self.data_log['v'].copy()
         tau_traj = self.data_log['tau'].copy()
@@ -127,14 +123,15 @@ class TrajLogger:
 
         print('q, v, tau and contacts traj .dat files saved in: ', self.directory)
 
-    def store_mcapi_traj(self, tsidw, traj_name):
+    def store_mcapi_traj(self, traj_name):
         if not mcapi_import:
             print('multicontact_api package import has failed, check your install')
             return
             
+        self.set_data_lst_as_arrays()
+
         # trajectory with only one ContactPhase (simpler to read/write)
         # when feet not in contact, the force is exactly zero, that's the only diff
-
         cs = ContactSequence()
         cp = ContactPhase()
 
@@ -152,11 +149,10 @@ class TrajLogger:
         cp.tau_t = piecewise.FromPointsList(self.data_log['tau'].T, t_arr)
         cp.c_t = piecewise.FromPointsList(self.data_log['c'].T, t_arr)
         cp.dc_t = piecewise.FromPointsList(self.data_log['dc'].T, t_arr)
-        cp.ddc_t = piecewise.FromPointsList(self.data_log['ddc'].T, t_arr)  # not needed
         cp.L_t = piecewise.FromPointsList(self.data_log['Lc'].T, t_arr)
 
         # contact force trajectories
-        for i_foot, frame_name in enumerate(tsidw.contact_frame_names):
+        for i_foot, frame_name in enumerate(self.contact_names):
             cp.addContact(frame_name, ContactPatch(pin.SE3(),0.5))  # dummy placement and friction coeff
             cp.addContactForceTrajectory(frame_name, piecewise.FromPointsList(self.data_log['f{}'.format(i_foot)].T, t_arr))
 
