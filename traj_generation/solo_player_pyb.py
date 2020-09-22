@@ -43,7 +43,7 @@ def forces_from_torques(model, data, q, v, dv, tauj, Jlinvel):
 DT = 0.001
 SLEEP = False
 NOFEET = True
-# NOFEET = False
+SAVE_CS = False
 
 if NOFEET:
     URDF_NAME = 'solo12_nofeet.urdf'
@@ -159,10 +159,10 @@ sim.retrieve_pyb_data()
 q = sim.q  # w_p_b, w_q_b, qa
 v = sim.v  # nu_b, va
 
+
+
+
 lines = {}
-t_lst = []
-tau_lst = []
-o_f_tot_lst = []
 for i in range(N):
     print()
     print()
@@ -186,9 +186,19 @@ for i in range(N):
     wRb = pin.Quaternion(q[3:7].reshape((4,1))).toRotationMatrix()
     w_Lc = wRb @ b_h.angular
 
-
     # torque to be exactly applied on the robot pyb model joints
     tau = compute_control_torque(q_arr[i,7:], v_arr[i,6:], tau_arr[i,6:], q[7:], v[6:])
+
+    # data BEFORE simulation step
+    data_cs = {
+        't': t,
+        'q': q,
+        'v': v,
+        'c': c,
+        'dc': dc,
+        'tau': tau,  # TODO: see if better to store the NEXT one
+        'Lc': w_Lc
+    }
 
     # Center the camera on the current position of the robot
     # pyb.resetDebugVisualizerCamera(cameraDistance=0.8, cameraYaw=-50, cameraPitch=-39.9,
@@ -199,28 +209,13 @@ for i in range(N):
                                 controlMode=pyb.TORQUE_CONTROL, 
                                 forces=tau)
 
-    # SIMULTATE
+    # SIMULATE
     # Compute one step of simulation
     pyb.stepSimulation()
 
     # get contact forces in World frame from pybullet
     forces_pyb = fm.get_contact_forces(display=True)
 
-    # update pin robot geometry based on simulation
-    robot.forwardKinematics(sim.q)
-
-    # data BEFORE simulation step
-    data_cs = {
-        't': t,
-        'q': q,
-        'v': v,
-        'c': c,
-        'dc': dc,
-        'tau': tau,
-        'Lc': w_Lc
-    }
-
-    # TODO: think about shifting the force sensors as well
     sim.retrieve_pyb_data()
     q = sim.q  # w_p_b, w_q_b, qa
     v = sim.v  # nu_b, va
@@ -238,21 +233,19 @@ for i in range(N):
     # compute forces that should be exerted on the ee due to these torques
     Jlinvel = get_Jlinvel(robot, q, contact_frame_ids)
     forces_tau = forces_from_torques(model, data, q, v, dv, tau, Jlinvel)
+    dic_forces = {'f{}'.format(i): forces_tau[3*i:3*i+3] for i in range(4)}
     
-    # TEST
+    ####################
+    # FORCE RECONSTRUCTION TESTS
+    ####################
+
     tau_tot = pin.rnea(model, data, q, v, dv)
     tau_forces = tau_tot[6:] - tau
-    # print('TOTO')
-    # print(tau_forces - Jlinvel.T@forces_tau)
+    assert(np.allclose(tau_forces, Jlinvel.T@forces_tau))
 
-    #
-    # print('tau control')
-    # print(tau)
-    # print('delta tau  ', tau - torques_for_test)
-    dic_forces = {'f{}'.format(i): forces_tau[3*i:3*i+3] for i in range(4)}
 
     ###############
-    # Force reconstruction
+    # Total force from torques in world frame
     o_f_tot = np.zeros(3)
     for j, c_id in enumerate(contact_frame_ids):
         l_fl = dic_forces['f{}'.format(j)]
@@ -260,21 +253,19 @@ for i in range(N):
         o_fl = o_R_l @ l_fl
         o_f_tot += o_fl
     
+    # Total force from pybullet api in world frame
+    ftot_pyb = np.zeros(3)
+    for ct_id in forces_pyb:
+        ftot_pyb += forces_pyb[ct_id]['f']
+
     # print('o_f_tot:             ', o_f_tot)
     # mg = robot.data.mass[0] * robot.model.gravity.linear
     # print('m*g:                 ', mg)
     # print('mg+o_f_tot:          ', mg+o_f_tot)
+
+    # print('ftot_pyb')
+    # print(ftot_pyb)
     ################
-
-    ###############
-    # Forces from pyb
-    ftot_pyb = np.zeros(3)
-    for ct_id in forces_pyb:
-        ftot_pyb += forces_pyb[ct_id]['f']
-    print('ftot_pyb')
-    print(ftot_pyb)
-    ###############
-
 
     ################
     # dynamic equation
@@ -286,29 +277,23 @@ for i in range(N):
     q_static[:7] = np.array([0]*6+[1])
     gq_static = pin.computeGeneralizedGravity(model, data, q_static)
 
-    # print('gq free lyer')
-    # print(gq[:6])
-    # print('o_f_tot - gq')
-    # print(o_f_tot - gq[:3])
-    # print('gq_static free lyer')
-    # print(gq_static[:6])
-    print('o_f_tot - gq_static:  ', o_f_tot - gq_static[:3])
-    print('ftot_pyb - gq_static: ', ftot_pyb - gq_static[:3])
+    # Compare gravity in world frame with total forces
+    print('ftot_pyb - gq_static: ', ftot_pyb - gq_static[:3])  # OK
+    print('o_f_tot - gq_static:  ', o_f_tot - gq_static[:3])   # NOTOK
 
     Mq_a = Mq[6:,:]
     Cqdq_a = Cqdq[6:,:]
     gq_a = gq[6:]
 
-    diff = Mq_a@dv + Cqdq_a@v + gq_a - Jlinvel.T@forces_tau + tau
-    # print('diff')
-    # print(diff)
+    # another test on the dynamics equation (without free flyer 6 first rows)
+    assert(np.allclose(Mq_a@dv + Cqdq_a@v + gq_a, Jlinvel.T@forces_tau + tau))
     ################
 
     data_cs.update(dic_forces)
     logger.append_data(data_cs)
 
-    # print(1/0)
-
+    #####################
+    # Draw debug lines starting from the ee frame, going upward along z
     # print()
     # for ct_id in contact_frame_ids:
     #     w_T_c = robot.framePlacement(sim.q, ct_id)
@@ -319,14 +304,7 @@ for i in range(N):
         # pyb.addUserDebugLine(start, end, lineColorRGB=[
         #     0.0, 1.0, 0.0], lineWidth=4)
 
-
-    
-    # LOGS
-    t_lst.append(t)
-    tau_lst.append(tau)
-    o_f_tot_lst.append(o_f_tot)
-
-
+    #####################
 
     # Wait a bit
     delay = time.time() - t1
@@ -339,14 +317,10 @@ for i in range(N):
 
 
 
-
-logger.store_mcapi_traj(cs_file_pyb_name)
+if SAVE_CS:
+    logger.store_mcapi_traj(cs_file_pyb_name)
 
 # plt.figure()
 # plt.plot(np.arange(N), np.array(delays))
 # plt.grid()
-
-
-plt.figure('tau control')
-
-plt.show()
+# plt.show()
