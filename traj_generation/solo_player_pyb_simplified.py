@@ -70,11 +70,15 @@ pin.loadReferenceConfigurations(model, srdf, False)
 
 contact_frame_ids = [model.getFrameId(ct_frame) for ct_frame in contact_frame_names]
 
-q_init = np.array([-1.24964491e-06,  6.80742469e-05,  2.26246463e-01, -3.76689866e-05,
-                   -9.93946134e-07, -9.64261665e-07,  9.99999999e-01,  1.04524409e-01,
-                    8.43752750e-01, -1.68050665e+00, -1.04918212e-01,  8.43499359e-01,
-                   -1.68004939e+00,  1.04535100e-01, -8.43750114e-01,  1.68050567e+00,
-                   -1.04929422e-01, -8.43503995e-01,  1.68004927e+00,])
+# exact initial configuration matching the steady state of PD control based on q_des
+q_init = np.array([-2.67343027e-06,  7.24031162e-05,  2.26213751e-01, -3.77063916e-05,
+                   -2.10135742e-06, -1.78050529e-06,  9.99999999e-01,  1.04840508e-01,
+                    8.43699081e-01, -1.68053305e+00, -1.05235279e-01,  8.43442591e-01,
+                   -1.68007415e+00,  1.04864806e-01, -8.43693656e-01,  1.68053013e+00,
+                   -1.05257828e-01, -8.43452273e-01,  1.68007469e+00,])
+q_des = np.array([ 0.,     0.,     0.235,  0.,     0.,     0.,     1.,     0.1,    0.8,   -1.6,
+                 -0.1,    0.8,   -1.6,    0.1,   -0.8,    1.6,   -0.1,   -0.8,    1.6,  ])
+
 v_init = np.zeros(robot.model.nv)
 
 sim = SimulatorPybullet(URDF_NAME, DT, q_init, 12, robot, controlled_joint_names, contact_frame_names, gravity=[0, 0.0, -9.81])
@@ -116,7 +120,7 @@ for i in range(10000):
     w_Lc = wRb @ b_h.angular
 
     # torque to be exactly applied on the robot pyb model joints
-    tau = compute_control_torque(q_init[7:], v_init[6:], np.zeros(12), q[7:], v[6:])
+    tau = compute_control_torque(q_des[7:], np.zeros(12), np.zeros(12), q_init[7:], np.zeros(12))
 
     # Set control torque for all joints
     pyb.setJointMotorControlArray(sim.robotId, sim.bullet_joint_ids,
