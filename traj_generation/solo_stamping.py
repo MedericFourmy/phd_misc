@@ -3,17 +3,22 @@ import numpy as np
 import pinocchio as pin
 import tsid
 from tsid_wrapper import TsidWrapper
-import conf_solo12 as conf
 from traj_logger import TrajLogger
 from scipy.stats import logistic
 
 from utils import *
 
+# import conf_solo12 as conf
+# TRAJ_NAME = 'solo_stamping'
+
+import conf_solo12_nofeet as conf
+TRAJ_NAME = 'solo_stamping_nofeet'
+
 dt = conf.dt
 
 tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
-# logger = TrajLogger(tsid_solo.contact_frame_names, directory='/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
-logger = TrajLogger(tsid_solo.contact_frame_names, directory='temp_traj')
+logger = TrajLogger(tsid_solo.contact_frame_names, directory='/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
+# logger = TrajLogger(tsid_solo.contact_frame_names, directory='temp_traj')
 
 data = tsid_solo.invdyn.data()
 robot = tsid_solo.robot
@@ -206,8 +211,8 @@ while not end_traj:
         time_start = time.time()
 
 
-logger.store_csv_trajs('solo_stamping', sep=' ', skip_free_flyer=True)
-logger.store_mcapi_traj('solo_stamping')
+# logger.store_csv_trajs(TRAJ_NAME, sep=' ', skip_free_flyer=True)
+logger.store_mcapi_traj(TRAJ_NAME)
 
 import matplotlib.pyplot as plt
 
@@ -216,30 +221,30 @@ import matplotlib.pyplot as plt
 plt.figure('solo stamping contact forces')
 plt.title('solo stamping contact forces')
 plt.subplot(4,1,1)
-plt.plot(logger.data_log['t'], logger.data_log['f0'][:,0], label='{}_fx'.format(logger.data_log['contact_frame_names'][0]))
-plt.plot(logger.data_log['t'], logger.data_log['f1'][:,0], label='{}_fx'.format(logger.data_log['contact_frame_names'][1]))
-plt.plot(logger.data_log['t'], logger.data_log['f2'][:,0], label='{}_fx'.format(logger.data_log['contact_frame_names'][2]))
-plt.plot(logger.data_log['t'], logger.data_log['f3'][:,0], label='{}_fx'.format(logger.data_log['contact_frame_names'][3]))
+plt.plot(logger.data_log['t'], logger.data_log['f0'][:,0], label='{}_fx'.format(logger.contact_names[0]))
+plt.plot(logger.data_log['t'], logger.data_log['f1'][:,0], label='{}_fx'.format(logger.contact_names[1]))
+plt.plot(logger.data_log['t'], logger.data_log['f2'][:,0], label='{}_fx'.format(logger.contact_names[2]))
+plt.plot(logger.data_log['t'], logger.data_log['f3'][:,0], label='{}_fx'.format(logger.contact_names[3]))
 plt.legend()
 plt.grid()
 plt.subplot(4,1,2)
-plt.plot(logger.data_log['t'], logger.data_log['f0'][:,1], label='{}_fy'.format(logger.data_log['contact_frame_names'][0]))
-plt.plot(logger.data_log['t'], logger.data_log['f1'][:,1], label='{}_fy'.format(logger.data_log['contact_frame_names'][1]))
-plt.plot(logger.data_log['t'], logger.data_log['f2'][:,1], label='{}_fy'.format(logger.data_log['contact_frame_names'][2]))
-plt.plot(logger.data_log['t'], logger.data_log['f3'][:,1], label='{}_fy'.format(logger.data_log['contact_frame_names'][3]))
+plt.plot(logger.data_log['t'], logger.data_log['f0'][:,1], label='{}_fy'.format(logger.contact_names[0]))
+plt.plot(logger.data_log['t'], logger.data_log['f1'][:,1], label='{}_fy'.format(logger.contact_names[1]))
+plt.plot(logger.data_log['t'], logger.data_log['f2'][:,1], label='{}_fy'.format(logger.contact_names[2]))
+plt.plot(logger.data_log['t'], logger.data_log['f3'][:,1], label='{}_fy'.format(logger.contact_names[3]))
 plt.legend()
 plt.grid()
 plt.subplot(4,1,3)
-plt.plot(logger.data_log['t'], logger.data_log['f0'][:,2], label='{}_fz'.format(logger.data_log['contact_frame_names'][0]))
-plt.plot(logger.data_log['t'], logger.data_log['f1'][:,2], label='{}_fz'.format(logger.data_log['contact_frame_names'][1]))
-plt.plot(logger.data_log['t'], logger.data_log['f2'][:,2], label='{}_fz'.format(logger.data_log['contact_frame_names'][2]))
-plt.plot(logger.data_log['t'], logger.data_log['f3'][:,2], label='{}_fz'.format(logger.data_log['contact_frame_names'][3]))
+plt.plot(logger.data_log['t'], logger.data_log['f0'][:,2], label='{}_fz'.format(logger.contact_names[0]))
+plt.plot(logger.data_log['t'], logger.data_log['f1'][:,2], label='{}_fz'.format(logger.contact_names[1]))
+plt.plot(logger.data_log['t'], logger.data_log['f2'][:,2], label='{}_fz'.format(logger.contact_names[2]))
+plt.plot(logger.data_log['t'], logger.data_log['f3'][:,2], label='{}_fz'.format(logger.contact_names[3]))
 plt.legend()
 plt.subplot(4,1,4)
-plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,0], label='{}_contact'.format(logger.data_log['contact_frame_names'][0]))
-plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,1], label='{}_contact'.format(logger.data_log['contact_frame_names'][1]))
-plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,2], label='{}_contact'.format(logger.data_log['contact_frame_names'][2]))
-plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,3], label='{}_contact'.format(logger.data_log['contact_frame_names'][3]))
+plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,0], label='{}_contact'.format(logger.contact_names[0]))
+plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,1], label='{}_contact'.format(logger.contact_names[1]))
+plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,2], label='{}_contact'.format(logger.contact_names[2]))
+plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,3], label='{}_contact'.format(logger.contact_names[3]))
 plt.legend()
 plt.grid()
 
@@ -333,10 +338,10 @@ plt.subplot(2,1,1)
 plt.plot(logger.data_log['t'], w_prev_arr, label='w_prev')
 plt.plot(logger.data_log['t'], w_next_arr, label='w_next')
 plt.subplot(2,1,2)
-plt.plot(logger.data_log['t'], logger.data_log['f0'][:,2], label='{}_fz'.format(logger.data_log['contact_frame_names'][0]))
-plt.plot(logger.data_log['t'], logger.data_log['f1'][:,2], label='{}_fz'.format(logger.data_log['contact_frame_names'][1]))
-plt.plot(logger.data_log['t'], logger.data_log['f2'][:,2], label='{}_fz'.format(logger.data_log['contact_frame_names'][2]))
-plt.plot(logger.data_log['t'], logger.data_log['f3'][:,2], label='{}_fz'.format(logger.data_log['contact_frame_names'][3]))
+plt.plot(logger.data_log['t'], logger.data_log['f0'][:,2], label='{}_fz'.format(logger.contact_names[0]))
+plt.plot(logger.data_log['t'], logger.data_log['f1'][:,2], label='{}_fz'.format(logger.contact_names[1]))
+plt.plot(logger.data_log['t'], logger.data_log['f2'][:,2], label='{}_fz'.format(logger.contact_names[2]))
+plt.plot(logger.data_log['t'], logger.data_log['f3'][:,2], label='{}_fz'.format(logger.contact_names[3]))
 plt.legend()
 
 

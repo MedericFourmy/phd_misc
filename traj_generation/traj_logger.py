@@ -111,14 +111,14 @@ class TrajLogger:
         for col in range(tau_traj.shape[1]):
             colname = 'tau{}'.format(col)
             df_tau[colname] = tau_traj[:,col]
-        for col, cname in enumerate(self.data_log['contact_names']):
+        for col, cname in enumerate(self.contact_names):
             df_contacts[cname] = contacts_traj[:,col]
         
         df_q.to_csv(os.path.join(self.directory, '{}_q.dat'.format(traj_name)), sep=sep, index=False, header=False)
         df_v.to_csv(os.path.join(self.directory, '{}_v.dat'.format(traj_name)), sep=sep, index=False, header=False)
         df_tau.to_csv(os.path.join(self.directory, '{}_tau.dat'.format(traj_name)), sep=sep, index=False, header=False)
         df_contacts.to_csv(os.path.join(self.directory, '{}_contacts.dat'.format(traj_name)), sep=sep, index=False, header=False)
-        df_contact_names = pd.DataFrame(columns=self.data_log['contact_names'])
+        df_contact_names = pd.DataFrame(columns=self.contact_names)
         df_contact_names.to_csv(os.path.join(self.directory, '{}_contact_names.dat'.format(traj_name)), sep=sep, index=False, header=True)
 
         print('q, v, tau and contacts traj .dat files saved in: ', self.directory)

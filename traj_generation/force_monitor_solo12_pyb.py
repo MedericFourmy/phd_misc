@@ -10,16 +10,35 @@ import pybullet as pyb
 
 class ForceMonitor:
 
-    def __init__(self, robotId, planeId):
+    def __init__(self, robotId, planeId, contact_links_ids):
 
         self.lines = []
         self.robotId = robotId
         self.planeId = planeId
+        self.contact_links_ids = contact_links_ids
+        self.contact_links_ids = [idx-1 for idx in self.contact_links_ids]  # TODO: only for no feet!
+
 
     def getContactPoint(self, contactPoints):
         """ Sort contacts points as there should be only one contact per foot
             and sometimes PyBullet detect several of them. There is one contact
             with a non zero force and the others have a zero contact force
+
+            Each contact point is a tuple containing:
+            contactFlag
+            bodyUniqueIdA
+            bodyUniqueIdB
+            linkIndexA
+            linkIndexB
+            positionOnA
+            positionOnB
+            contactNormalOnB
+            contactDistance
+            normalForce
+            lateralFriction1
+            lateralFrictionDir1
+            lateralFriction2
+            lateralFrictionDir2
         """
 
         for i in range(0, len(contactPoints)):
@@ -32,16 +51,15 @@ class ForceMonitor:
 
     def get_contact_forces(self, display=False):
         # Front left foot, Front right foot, Hind left  foot, Hind right foot
-        link_idx = [3, 7, 11, 15][::-1]
         # contact_frame_names = ['HR_ANKLE', 'HL_ANKLE', 'FR_ANKLE', 'FL_ANKLE']  # same thing as XX_FOOT but contained in pybullet
 
         # forces are exactly zero when contact not active, also storing the contact point in world
-        forces = {idx: {'f': np.zeros(3), 'wpc': np.zeros(3)} for idx in link_idx}  
+        forces = {idx: {'f': np.zeros(3), 'wpc': np.zeros(3)} for idx in self.contact_links_ids}  
 
         i_line = 0
         K = 0.02
         # Info about contact points with the ground
-        for idx in link_idx:
+        for idx in self.contact_links_ids:
             ct = pyb.getContactPoints(self.robotId, self.planeId, linkIndexA=idx)
             # Sort contacts points to get only one contact per foot
             ct = self.getContactPoint(ct)

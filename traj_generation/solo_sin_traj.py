@@ -6,6 +6,10 @@ from tsid_wrapper import TsidWrapper
 import conf_solo12 as conf
 from traj_logger import TrajLogger
 
+TRAJ_NAME = 'solo_sin_y_trunk'
+# UNCOMMENT TO DISABLE TRUNK TASK
+# conf.w_trunk = 0
+
 dt = conf.dt
 tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
 logger = TrajLogger(tsid_solo.contact_frame_names, directory='/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
@@ -16,19 +20,18 @@ data = tsid_solo.invdyn.data()
 q, v = tsid_solo.q, tsid_solo.v
 
 # Params for Com trajectory
-# amp        = np.array([-0.02, 0.02, 0.02])                 # amplitude of com mvt
-amp        = np.array([0.0, 0.0, 0.0])                  # amplitude of com mvt
+amp        = np.array([-0.0, 0.02, 0.0])                 # amplitude of com mvt
+# amp        = np.array([0.0, 0.0, 0.0])                  # amplitude of com mvt
 offset     = robot.com(data) - amp                         # offset of the measured CoM 
 two_pi_f             = 2*np.pi*np.array([0.2, 0.4, 0.2])   # movement frequencies along each axis
 two_pi_f_amp         = two_pi_f * amp                      # 2π function times amplitude function
 two_pi_f_squared_amp = two_pi_f * two_pi_f_amp             # 2π function times squared amplitude function
 
 # Params for trunk orientation trajectory
-amp_trunk = np.deg2rad(np.array([30, 0.0, 0.0]))   # orientation, numbers in degrees
+amp_trunk = np.deg2rad(np.array([0.0, 0.0, 0.0]))   # orientation, numbers in degrees
+# amp_trunk = np.deg2rad(np.array([10.0, 10.0, 0.0]))   # orientation, numbers in degrees
 two_pi_f_trunk     = 2*np.pi*np.array([0.2, 0.2, 0.2])  # movement frequencies along each axis
 R_trunk_init = robot.framePosition(data, tsid_solo.trunk_link_id).rotation
-print('R_trunk_init')
-print(R_trunk_init)
 
 
 # Init values
@@ -75,8 +78,8 @@ for i in range(0, conf.N_SIMULATION):
 
 
 # logger.store_csv_trajs('solo_sin_traj', sep=' ')
-# logger.store_mcapi_traj('solo_sin_traj')
-logger.store_mcapi_traj('solo_sin_roll')
+if TRAJ_NAME is not None:
+    logger.store_mcapi_traj(TRAJ_NAME)
 
 import matplotlib.pyplot as plt
 

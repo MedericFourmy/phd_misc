@@ -8,7 +8,7 @@ import pinocchio as pin
 
 class SimulatorPybullet:
 
-    def __init__(self, dt, q_init, nqa, pinocchio_robot, joint_names, endeff_names, gravity=[0,0,-9.81]):
+    def __init__(self, urdf_name, dt, q_init, nqa, pinocchio_robot, joint_names, endeff_names, gravity=[0,0,-9.81]):
         
         
         # Start the client for PyBullet
@@ -33,39 +33,52 @@ class SimulatorPybullet:
         
         flags = pyb.URDF_USE_INERTIA_FROM_FILE  # Necessary?
         self.robotId = pyb.loadURDF(
-            "solo12.urdf", robotStartPos, robotStartOrientation, flags=flags)
+            urdf_name, robotStartPos, robotStartOrientation)
 
-        # Disable default motor control for revolute joints
-        self.revoluteJointIndices = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]
-        pyb.setJointMotorControlArray(self.robotId, 
-                                      jointIndices=self.revoluteJointIndices, 
-                                      controlMode=pyb.VELOCITY_CONTROL,
-                                      targetVelocities=[
-                                          0.0 for m in self.revoluteJointIndices],
-                                      forces=[0.0 for m in self.revoluteJointIndices])
-
-        # Initialize the robot in a specific configuration
-        pyb.resetJointStatesMultiDof(self.robotId, self.revoluteJointIndices, q_a)
-
-        # Enable torque control for revolute joints
-        jointTorques = [0.0]*len(self.revoluteJointIndices)
-        pyb.setJointMotorControlArray(self.robotId, self.revoluteJointIndices,
-                                      controlMode=pyb.TORQUE_CONTROL, forces=jointTorques)
-
-        
+        # get joint ids informations in pyb and pinocchio
         bullet_joint_map = {}
         for ji in range(pyb.getNumJoints(self.robotId)):
             bullet_joint_map[pyb.getJointInfo(self.robotId, ji)[1].decode('UTF-8')] = ji
+        
+        print()
+        print('JOINTS')
+        print('bullet_joint_map')
+        print(len(bullet_joint_map))
+        print(bullet_joint_map)
+        print('Pinocchio frame names')
+        print(len(pinocchio_robot.model.names))
+        print([joint for joint in pinocchio_robot.model.names])
+
 
         self.bullet_joint_ids = np.array([bullet_joint_map[name] for name in joint_names])
         self.pinocchio_joint_ids = np.array([pinocchio_robot.model.getJointId(name) for name in joint_names])
-
+        
+        print('joint_names')
+        print(joint_names)
+        print('bullet_joint_ids')
+        print(self.bullet_joint_ids)
+        print('pinocchio_joint_ids')
+        print(self.pinocchio_joint_ids)
 
         # In pybullet, the contact wrench is measured at a joint. In our case
         # the joint is fixed joint. Pinocchio doesn't add fixed joints into the joint
         # list. Therefore, the computation is done wrt to the frame of the fixed joint.
-        self.bullet_endeff_ids = [bullet_joint_map[name] for name in endeff_names]
-        self.pinocchio_endeff_ids = [pinocchio_robot.model.getFrameId(name) for name in endeff_names]
+        self.pyb_endeff_ids = [bullet_joint_map[name] for name in endeff_names]
+        self.pin_endeff_ids = [pinocchio_robot.model.getFrameId(name) for name in endeff_names]
+
+
+        # Disable default motor control for revolute joints
+        pyb.setJointMotorControlArray(self.robotId, 
+                                      jointIndices=self.bullet_joint_ids, 
+                                      controlMode=pyb.VELOCITY_CONTROL,
+                                      forces=[0.0 for _ in self.bullet_joint_ids])
+        # Initialize the robot in a specific configuration
+        pyb.resetJointStatesMultiDof(self.robotId, self.bullet_joint_ids, q_a)
+
+        # Enable torque control for revolute joints
+        jointTorques = [0.0]*len(self.bullet_joint_ids)
+        pyb.setJointMotorControlArray(self.robotId, self.bullet_joint_ids,
+                                      controlMode=pyb.TORQUE_CONTROL, forces=jointTorques)
 
         # Set time step for the simulation
         pyb.setTimeStep(dt)
@@ -75,68 +88,30 @@ class SimulatorPybullet:
                                        cameraTargetPosition=[0.0, 0.6, 0.0])
 
     def retrieve_pyb_data(self):
-        """Retrieve the position and orientation of the base in world frame as well as its linear and angular velocities
+        """
+        Retrieve the position and orientation of the base in world frame as well as its linear and angular velocities
         """
 
-        # Retrieve data from the simulation
-        self.jointStates = pyb.getJointStates(
-            self.robotId, self.revoluteJointIndices)  # State of all joints
-        self.baseState = pyb.getBasePositionAndOrientation(
-            self.robotId)  # Position and orientation of the trunk
-        self.baseVel = pyb.getBaseVelocity(
-            self.robotId)  # Velocity of the trunk
+        # Joint states
+        jointStates = pyb.getJointStates(self.robotId, self.bullet_joint_ids)
+        self.qa = np.array([state[0] for state in jointStates])
+        self.va = np.array([state[1] for state in jointStates])
+
+        # Position and orientation of the trunk
+        self.w_p_b, self.w_quat_b = pyb.getBasePositionAndOrientation(self.robotId)
+        self.w_p_b, self.w_quat_b = np.array(self.w_p_b), np.array(self.w_quat_b)
+        self.w_R_b = pin.Quaternion(self.w_quat_b.reshape((4,1))).toRotationMatrix()
+
+        # Velocity of the trunk -> world coordinates given by pyb
+        self.w_v_b, self.w_omg_b = pyb.getBaseVelocity(self.robotId)
+        self.w_v_b, self.w_omg_b = np.array(self.w_v_b), np.array(self.w_omg_b)
+        self.b_v_b, self.b_omg_b = self.w_R_b.T @ self.w_v_b, self.w_R_b.T @ self.w_omg_b
 
         # Joints configuration and velocity vector for free-flyer + 12 actuators
-        self.qmes = np.vstack((np.array([self.baseState[0]]).T, np.array([self.baseState[1]]).T,
-                                 np.array([[state[0] for state in self.jointStates]]).T))
-        self.vmes = np.vstack((np.array([self.baseVel[0]]).T, np.array([self.baseVel[1]]).T,
-                                 np.array([[state[1] for state in self.jointStates]]).T))
+        self.q = np.hstack((self.w_p_b, self.w_quat_b, self.qa))
+        self.v = np.hstack((self.b_v_b, self.b_omg_b,  self.va))
 
         return 0
-
-    # def get_force(self):
-    #     """ Returns the force readings as well as the set of active contacts """
-    #     active_contacts_frame_ids = []
-    #     contact_forces = []
-
-    #     # Get the contact model using the pyb.getContactPoints() api.
-    #     def sign(x):
-    #         if x >= 0:
-    #             return 1.
-    #         else:
-    #             return -1.
-
-    #     cp = pyb.getContactPoints()
-
-    #     for ci in reversed(cp):
-    #         contact_normal = ci[7]
-    #         normal_force = ci[9]
-    #         lateral_friction_direction_1 = ci[11]
-    #         lateral_friction_force_1 = ci[10]
-    #         lateral_friction_direction_2 = ci[13]
-    #         lateral_friction_force_2 = ci[12]
-
-    #         if ci[3] in self.bullet_endeff_ids:
-    #             i = np.where(np.array(self.bullet_endeff_ids) == ci[3])[0][0]
-    #         elif ci[4] in self.bullet_endeff_ids:
-    #             i = np.where(np.array(self.bullet_endeff_ids) == ci[4])[0][0]
-    #         else:
-    #             continue
-
-    #         if self.pinocchio_endeff_ids[i] in active_contacts_frame_ids:
-    #             continue
-
-    #         active_contacts_frame_ids.append(self.pinocchio_endeff_ids[i])
-    #         force = np.zeros(6)
-
-    #         force[:3] = normal_force * np.array(contact_normal) + \
-    #                     lateral_friction_force_1 * np.array(lateral_friction_direction_1) + \
-    #                     lateral_friction_force_2 * np.array(lateral_friction_direction_2)
-
-    #         contact_forces.append(force)
-
-    #     return active_contacts_frame_ids[::-1], contact_forces[::-1]
-
 
 
 if __name__ == '__main__':
@@ -161,7 +136,7 @@ if __name__ == '__main__':
         jointTorques = 0.1 * np.sin(2 * np.pi * i * 0.001 * np.ones((12, 1)))
 
         # Set control torque for all joints
-        pyb.setJointMotorControlArray(pyb_sim.robotId, pyb_sim.revoluteJointIndices,
+        pyb.setJointMotorControlArray(pyb_sim.robotId, pyb_sim.bullet_joint_ids,
                                     controlMode=pyb.TORQUE_CONTROL, forces=jointTorques)
 
         # Compute one step of simulation
