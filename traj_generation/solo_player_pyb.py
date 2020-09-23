@@ -24,26 +24,42 @@ def compute_control_torque(qa_d, va_d, tau_d, qa_mes, va_mes):
     return tau
 
 
-def get_Jlinvel(robot, q, contact_ids):
-    Jlinvel = np.zeros((12, 12))
-    for i, ct_id in enumerate(contact_ids):
-        f_Jf = robot.computeFrameJacobian(q, ct_id)[:3,6:]
+def get_Jlinvel(robot, q, contac_ids):
+    Jlinvel = np.zeros((12, 18))
+    for i, c_id in enumerate(contac_ids):
+        f_Jf = robot.computeFrameJacobian(q, c_id)[:3,:]
         Jlinvel[3*i:3*i+3,:] = f_Jf
+
     return Jlinvel
 
 
-def forces_from_torques(model, data, q, v, dv, tauj, Jlinvel):
-    # print(Jlinvel)
+def forces_from_torques(model, data, q, v, dv, tauj, Jlinvel_red):
+    """
+    Works only well if the contact kinematics are perfect
+    """
     tau_tot = pin.rnea(model, data, q, v, dv)
     tau_forces = tau_tot[6:] - tauj
-    forces = np.linalg.solve(Jlinvel.T, tau_forces)
+    # forces = np.linalg.solve(Jlinvel_red.T, tau_forces)   # equivalent
+    forces, _, rank, s = np.linalg.lstsq(Jlinvel_red.T, tau_forces, rcond=None)
     return forces
 
+
+def forces_from_torques_full(model, data, q, v, dv, tauj, Jlinvel):
+    """
+    Compromise between the euler equations and contact leg dynamics
+    """
+    tau_tot = pin.rnea(model, data, q, v, dv)
+    tau_forces = tau_tot
+    tau_forces[6:] -= tauj
+    forces, _, rank, s = np.linalg.lstsq(Jlinvel.T, tau_forces, rcond=None)
+    return forces
+
+        
         
 DT = 0.001
 SLEEP = False
 NOFEET = True
-SAVE_CS = False
+SAVE_CS = True
 
 if NOFEET:
     URDF_NAME = 'solo12_nofeet.urdf'
@@ -90,8 +106,7 @@ contact_frame_ids = [model.getFrameId(ct_frame) for ct_frame in contact_frame_na
 # tau_arr = df_tau.to_numpy()
 
 # From ContactSequence file
-# cs_file_dir = '/home/mfourmy/Documents/Phd_LAAS/data/trajs/'
-cs_file_dir = './'
+cs_file_dir = '/home/mfourmy/Documents/Phd_LAAS/data/trajs/'
 cs_file_name = 'solo_nomove.cs'
 # cs_file_name = 'solo_sin_y_notrunk.cs'
 # cs_file_name = 'solo_sin_y_trunk.cs'
@@ -109,7 +124,7 @@ cs.loadFromBinary(cs_file_path)
 q_traj = cs.concatenateQtrajectories()
 dq_traj = cs.concatenateDQtrajectories()
 tau_traj = cs.concatenateTauTrajectories()
-ee_names = cs.getAllEffectorsInContact()  # not taken into account
+# ee_names = cs.getAllEffectorsInContact()  # not taken into account
 q_arr = []
 v_arr = []
 tau_arr = []
@@ -123,22 +138,22 @@ q_arr = np.array(q_arr)
 v_arr = np.array(v_arr)
 tau_arr = np.array(tau_arr)
 
-q_init = np.array([-1.24964491e-06,  6.80742469e-05,  2.26246463e-01, -3.76689866e-05,
-                   -9.93946134e-07, -9.64261665e-07,  9.99999999e-01,  1.04524409e-01,
-                    8.43752750e-01, -1.68050665e+00, -1.04918212e-01,  8.43499359e-01,
-                   -1.68004939e+00,  1.04535100e-01, -8.43750114e-01,  1.68050567e+00,
-                   -1.04929422e-01, -8.43503995e-01,  1.68004927e+00,])
+# q_init = np.array([-3.80707953e-06,  8.20657017e-05,  2.26055010e-01, -3.87928948e-05,
+#                    -4.05816557e-06,  1.59424082e-06,  9.99999999e-01,  1.05393051e-01,
+#                     8.43588548e-01, -1.68060272e+00, -1.05786780e-01,  8.43342731e-01,
+#                    -1.68014066e+00,  1.05439013e-01, -8.43589226e-01,  1.68060008e+00,
+#                    -1.05833217e-01, -8.43350394e-01,  1.68013856e+00,])
 
-# q_init = q_arr[0,:]
-# q_init[2] += 0.00178   # Optimal to get the lowest BUMP for point feet of ~0 radius
-dq_init = np.zeros((robot.nv))
+q_init = q_arr[0,:]
+q_init[2] += 0.00172   # Optimal to get the lowest BUMP for point feet of ~0 radius
+# q_init[2] += 0.00   # Optimal to get the lowest BUMP for point feet of ~0 radius
 
 print()
 print('contact_frame_names: ', contact_frame_names)
 
-sim = SimulatorPybullet(URDF_NAME, DT, q_init, 12, robot, controlled_joint_names, contact_frame_names, gravity=[0, 0.0, -9.81])
+sim = SimulatorPybullet(URDF_NAME, DT, q_init, 12, robot, controlled_joint_names, contact_frame_names, guion=False, gravity=[0, 0.0, -9.81])
 
-N = len(q_arr)
+N = len(q_arr)-1
 
 print('sim.robotId: ', sim.robotId)
 fm = ForceMonitor(sim.robotId, 0, sim.pyb_endeff_ids)
@@ -163,15 +178,11 @@ v = sim.v  # nu_b, va
 
 
 lines = {}
+forces_dic_lst = {'f{}'.format(i): [] for i in range(4)}
+ftot_lst = []
+ftot_pyb_lst = []
 for i in range(N):
-    print()
-    print()
     t1 = time.time()
-    print('t: ', t)
-    # print('q')
-    # print(q)
-    # print('v')
-    # print(v)
 
     # STORE
     # Get position/orientation of the base and angular position of actuators
@@ -192,12 +203,11 @@ for i in range(N):
     # data BEFORE simulation step
     data_cs = {
         't': t,
-        'q': q,
-        'v': v,
-        'c': c,
-        'dc': dc,
-        'tau': tau,  # TODO: see if better to store the NEXT one
-        'Lc': w_Lc
+        'q': q.copy(),
+        'v': v.copy(),
+        'c': c.copy(),
+        'dc': dc.copy(),
+        'Lc': w_Lc.copy()
     }
 
     # Center the camera on the current position of the robot
@@ -213,9 +223,6 @@ for i in range(N):
     # Compute one step of simulation
     pyb.stepSimulation()
 
-    # get contact forces in World frame from pybullet
-    forces_pyb = fm.get_contact_forces(display=True)
-
     sim.retrieve_pyb_data()
     q = sim.q  # w_p_b, w_q_b, qa
     v = sim.v  # nu_b, va
@@ -226,78 +233,60 @@ for i in range(N):
     wRb = pin.Quaternion(q[3:7].reshape((4,1))).toRotationMatrix()
     w_Lc = wRb @ b_h.angular
 
-    # data AFTER simulation step
-    data_cs['dv'] = dv
+    tau_next = compute_control_torque(q_arr[i+1,7:], v_arr[i+1,6:], tau_arr[i+1,6:], q[7:], v[6:])
 
-    # STORE 
+
+
     # compute forces that should be exerted on the ee due to these torques
     Jlinvel = get_Jlinvel(robot, q, contact_frame_ids)
-    forces_tau = forces_from_torques(model, data, q, v, dv, tau, Jlinvel)
-    dic_forces = {'f{}'.format(i): forces_tau[3*i:3*i+3] for i in range(4)}
+    Jlinvel_red = Jlinvel[:,6:]
+    # forces_tau = forces_from_torques(model, data, q, v, dv, tau, Jlinvel_red)
+    # forces_tau = forces_from_torques_full(model, data, q, v, dv, tau, Jlinvel)
+    forces_tau = forces_from_torques_full(model, data, q, v, dv, tau_next, Jlinvel)
+    dic_forces_tau = {'f{}'.format(i): forces_tau[3*i:3*i+3] for i in range(4)}
+    for i in range(4):
+        forces_dic_lst['f{}'.format(i)].append(dic_forces_tau['f{}'.format(i)])
     
-    ####################
-    # FORCE RECONSTRUCTION TESTS
-    ####################
-
-    tau_tot = pin.rnea(model, data, q, v, dv)
-    tau_forces = tau_tot[6:] - tau
-    assert(np.allclose(tau_forces, Jlinvel.T@forces_tau))
-
-
-    ###############
-    # Total force from torques in world frame
-    o_f_tot = np.zeros(3)
-    for j, c_id in enumerate(contact_frame_ids):
-        l_fl = dic_forces['f{}'.format(j)]
-        o_R_l = robot.framePlacement(q, c_id).rotation
-        o_fl = o_R_l @ l_fl
-        o_f_tot += o_fl
-    
-    # Total force from pybullet api in world frame
+    ###################################
+    # Compute total forces for tests
+    # get contact forces in World frame from pybullet
+    forces_pyb = fm.get_contact_forces(display=True)
+    ftot_tau = np.zeros(3)
     ftot_pyb = np.zeros(3)
-    for ct_id in forces_pyb:
-        ftot_pyb += forces_pyb[ct_id]['f']
+    dic_forces_pyb = {}
+    # print()
+    for j, (c_id_pin, c_id_pyb) in enumerate(zip(contact_frame_ids, fm.contact_links_ids)):
+        o_fpyb_l = forces_pyb[c_id_pyb]['f']
+        l_ftau_l = dic_forces_tau['f{}'.format(j)]
+        
+        o_R_l = robot.framePlacement(q, c_id_pin).rotation
+        o_ftau_l = o_R_l @ l_ftau_l
+        l_fpyb_l = o_R_l.T @ o_fpyb_l
 
-    # print('o_f_tot:             ', o_f_tot)
-    # mg = robot.data.mass[0] * robot.model.gravity.linear
-    # print('m*g:                 ', mg)
-    # print('mg+o_f_tot:          ', mg+o_f_tot)
+        dic_forces_pyb['f{}'.format(j)] = l_fpyb_l
 
-    # print('ftot_pyb')
-    # print(ftot_pyb)
-    ################
+        ftot_pyb += o_fpyb_l
+        ftot_tau += o_ftau_l
+    
+    ftot_lst.append(ftot_tau)
+    ftot_pyb_lst.append(ftot_pyb)
+    ###################################
 
-    ################
-    # dynamic equation
-    Mq = pin.crba(model, data, q)
-    Cqdq = pin.computeCoriolisMatrix(model, data, q, v)
-    gq = pin.computeGeneralizedGravity(model, data, q)
+    # data AFTER simulation step
+    data_cs['dv'] = dv
+    data_cs['tau'] = tau_next  # apparently slightly better, to verify
+    # data_cs['tau'] = tau
+    # data_cs.update(dic_forces_tau)
+    data_cs.update(dic_forces_pyb)
 
-    q_static = q.copy()
-    q_static[:7] = np.array([0]*6+[1])
-    gq_static = pin.computeGeneralizedGravity(model, data, q_static)
-
-    # Compare gravity in world frame with total forces
-    print('ftot_pyb - gq_static: ', ftot_pyb - gq_static[:3])  # OK
-    print('o_f_tot - gq_static:  ', o_f_tot - gq_static[:3])   # NOTOK
-
-    Mq_a = Mq[6:,:]
-    Cqdq_a = Cqdq[6:,:]
-    gq_a = gq[6:]
-
-    # another test on the dynamics equation (without free flyer 6 first rows)
-    assert(np.allclose(Mq_a@dv + Cqdq_a@v + gq_a, Jlinvel.T@forces_tau + tau))
-    ################
-
-    data_cs.update(dic_forces)
     logger.append_data(data_cs)
 
     #####################
     # Draw debug lines starting from the ee frame, going upward along z
     # print()
-    # for ct_id in contact_frame_ids:
-    #     w_T_c = robot.framePlacement(sim.q, ct_id)
-    #     print('w_t_f', ct_id, ' ', w_T_c.translation)
+    # for c_id in contact_frame_ids:
+    #     w_T_c = robot.framePlacement(sim.q, c_id)
+    #     print('w_t_f', c_id, ' ', w_T_c.translation)
 
         # start = w_T_c.translation
         # end = start + np.array([0, 0, 0.1])
@@ -313,7 +302,6 @@ for i in range(N):
         time.sleep(delay)
 
     t += DT
-    
 
 
 
@@ -324,3 +312,35 @@ if SAVE_CS:
 # plt.plot(np.arange(N), np.array(delays))
 # plt.grid()
 # plt.show()
+
+t_arr = np.arange(N)*DT
+
+# for i in range(4):
+#     plt.figure('f{}'.format(i))
+#     fi_arr = np.array(forces_dic_lst['f{}'.format(i)])
+#     # plt.plot(t_arr, fi_arr[:,0], 'r.')
+#     plt.plot(t_arr, fi_arr[:,1], 'g.')
+#     # plt.plot(t_arr, fi_arr[:,2], 'b.')
+
+ftot_arr = np.array(ftot_lst)
+ftot_pyb_arr = np.array(ftot_pyb_lst)
+
+f_diff = ftot_arr - ftot_pyb_arr
+
+plt.figure('ftotX')
+plt.plot(t_arr, ftot_arr[:,0], 'r.')
+plt.plot(t_arr, ftot_arr[:,1], 'g.')
+plt.plot(t_arr, ftot_arr[:,2], 'b.')
+
+plt.figure('ftot_pybX')
+plt.plot(t_arr, ftot_pyb_arr[:,0], 'r.')
+plt.plot(t_arr, ftot_pyb_arr[:,1], 'g.')
+plt.plot(t_arr, ftot_pyb_arr[:,2], 'b.')
+
+plt.figure('fdiff')
+plt.plot(t_arr, f_diff[:,0], 'r.')
+plt.plot(t_arr, f_diff[:,1], 'g.')
+plt.plot(t_arr, f_diff[:,2], 'b.')
+
+
+plt.show()

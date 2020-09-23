@@ -25,19 +25,32 @@ def compute_control_torque(qa_d, va_d, tau_d, qa_mes, va_mes):
 
 
 def get_Jlinvel(robot, q, contact_ids):
-    Jlinvel = np.zeros((12, 12))
+    Jlinvel = np.zeros((12, 18))
     for i, ct_id in enumerate(contact_ids):
-        f_Jf = robot.computeFrameJacobian(q, ct_id)[:3,6:]
+        f_Jf = robot.computeFrameJacobian(q, ct_id)[:3,:]
         Jlinvel[3*i:3*i+3,:] = f_Jf
+
     return Jlinvel
 
 
-def forces_from_torques(model, data, q, v, dv, tauj, Jlinvel):
-    # print(Jlinvel)
+def forces_from_torques(model, data, q, v, dv, tauj, Jlinvel_red):
+
     tau_tot = pin.rnea(model, data, q, v, dv)
     tau_forces = tau_tot[6:] - tauj
-    forces = np.linalg.solve(Jlinvel.T, tau_forces)
+    # forces = np.linalg.solve(Jlinvel_red.T, tau_forces)   # equivalent
+    forces, _, rank, s = np.linalg.lstsq(Jlinvel_red.T, tau_forces, rcond=None)
     return forces
+
+
+def forces_from_torques_full(model, data, q, v, dv, tauj, Jlinvel):
+        
+    tau_tot = pin.rnea(model, data, q, v, dv)
+    tau_forces = tau_tot
+    tau_forces[6:] -= tauj
+    forces, _, rank, s = np.linalg.lstsq(Jlinvel.T, tau_forces, rcond=None)
+    return forces
+
+        
 
         
 DT = 0.001
@@ -120,7 +133,8 @@ for i in range(10000):
     w_Lc = wRb @ b_h.angular
 
     # torque to be exactly applied on the robot pyb model joints
-    tau = compute_control_torque(q_des[7:], np.zeros(12), np.zeros(12), q_init[7:], np.zeros(12))
+    # tau = compute_control_torque(q_des[7:], np.zeros(12), np.zeros(12), q_init[7:], np.zeros(12))
+    tau = compute_control_torque(q_des[7:], np.zeros(12), np.zeros(12), q[7:], v[6:])
 
     # Set control torque for all joints
     pyb.setJointMotorControlArray(sim.robotId, sim.bullet_joint_ids,
@@ -147,16 +161,24 @@ for i in range(10000):
     # STORE 
     # compute forces that should be exerted on the ee due to these torques
     Jlinvel = get_Jlinvel(robot, q, contact_frame_ids)
+    Jlinvel_red = Jlinvel[:,6:]
     forces_tau = forces_from_torques(model, data, q, v, dv, tau, Jlinvel)
+    forces_tau_full = forces_from_torques_full(model, data, q, v, dv, tau, Jlinvel)
+    # print('forces_tau - forces_tau_full')
+    # print(forces_tau - forces_tau_full)
     dic_forces = {'f{}'.format(i): forces_tau[3*i:3*i+3] for i in range(4)}
+    # dic_forces = {'f{}'.format(i): forces_tau_full[3*i:3*i+3] for i in range(4)}
     
     ####################
     # FORCE RECONSTRUCTION TESTS
     ####################
 
+    # tau_tot_pyb = pyb.calculateInverseDynamics(sim.robotId, q[:7], v[:6], dv[:6])
     tau_tot = pin.rnea(model, data, q, v, dv)
-    tau_forces = tau_tot[6:] - tau
-    assert(np.allclose(tau_forces, Jlinvel.T@forces_tau))
+    # print('POPO')
+    # print(tau_tot_pyb - tau_tot)
+    # tau_forces = tau_tot[6:] - tau
+    # assert(np.allclose(tau_forces, Jlinvel.T@forces_tau))
 
 
     ###############
@@ -201,7 +223,10 @@ for i in range(10000):
     gq_a = gq[6:]
 
     # another test on the dynamics equation (without free flyer 6 first rows)
-    assert(np.allclose(Mq_a@dv + Cqdq_a@v + gq_a, Jlinvel.T@forces_tau + tau))
+    assert(np.allclose(Mq_a@dv + Cqdq_a@v + gq_a, Jlinvel_red.T@forces_tau + tau))
+    # In fact after, a very short transitory motion, the acceleration and coriolis terms are negligeable as expected
+    # if t > .05:
+    #     assert(np.allclose(gq_a, Jlinvel.T@forces_tau + tau))
     ################
 
     #####################
