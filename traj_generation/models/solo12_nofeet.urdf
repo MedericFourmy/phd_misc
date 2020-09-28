@@ -191,7 +191,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 -0.03"/>
       <geometry>
-	<sphere radius="0.0001"/>
+	<sphere radius="0.0000001"/>
       </geometry>
       <material name="red">
         <color rgba="1 0 0 1.0"/>
@@ -200,7 +200,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 -0.03"/>
       <geometry>
-        <sphere radius="0.0001"/>
+        <sphere radius="0.0000001"/>
       </geometry>
     </collision>
     <!-- Bullet specific paramters -->
@@ -381,7 +381,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 -0.03"/>
       <geometry>
-	<sphere radius="0.0001"/>
+	<sphere radius="0.0000001"/>
       </geometry>
       <material name="red">
         <color rgba="1 0 0 1.0"/>
@@ -390,7 +390,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 -0.03"/>
       <geometry>
-	<sphere radius="0.0001"/>
+	<sphere radius="0.0000001"/>
       </geometry>
     </collision>
   </link>
@@ -560,7 +560,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 -0.03"/>
       <geometry>
-	<sphere radius="0.0001"/>
+	<sphere radius="0.0000001"/>
       </geometry>
       <material name="red">
         <color rgba="1 0 0 1.0"/>
@@ -569,7 +569,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 -0.03"/>
       <geometry>
-	<sphere radius="0.0001"/>
+	<sphere radius="0.0000001"/>
       </geometry>
     </collision>
     <!-- Bullet specific paramters -->
@@ -744,7 +744,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 -0.03"/>
       <geometry>
-	<sphere radius="0.0001"/>
+	<sphere radius="0.0000001"/>
       </geometry>
       <material name="red">
         <color rgba="1 0 0 1.0"/>
@@ -753,7 +753,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 -0.03"/>
       <geometry>
-	<sphere radius="0.0001"/>
+	<sphere radius="0.0000001"/>
       </geometry>
     </collision>
     <!-- Bullet specific paramters -->
