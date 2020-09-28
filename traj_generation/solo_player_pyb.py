@@ -58,6 +58,7 @@ def forces_from_torques_full(model, data, q, v, dv, tauj, Jlinvel):
         
 DT = 0.001
 SLEEP = False
+GUION = False
 NOFEET = True
 SAVE_CS = True
 
@@ -107,8 +108,8 @@ contact_frame_ids = [model.getFrameId(ct_frame) for ct_frame in contact_frame_na
 
 # From ContactSequence file
 cs_file_dir = '/home/mfourmy/Documents/Phd_LAAS/data/trajs/'
-cs_file_name = 'solo_nomove.cs'
-# cs_file_name = 'solo_sin_y_notrunk.cs'
+# cs_file_name = 'solo_nomove.cs'
+cs_file_name = 'solo_sin_y_notrunk.cs'
 # cs_file_name = 'solo_sin_y_trunk.cs'
 # cs_file_name = 'solo_sin_traj.cs'
 # cs_file_name = 'solo_sin_rp+y.cs'
@@ -145,18 +146,17 @@ tau_arr = np.array(tau_arr)
 #                    -1.05833217e-01, -8.43350394e-01,  1.68013856e+00,])
 
 q_init = q_arr[0,:]
-q_init[2] += 0.00172   # Optimal to get the lowest BUMP for point feet of ~0 radius
-# q_init[2] += 0.00   # Optimal to get the lowest BUMP for point feet of ~0 radius
+q_init[2] += 0.00132   # Optimal to get the lowest BUMP for point feet of ~0 radius
 
 print()
 print('contact_frame_names: ', contact_frame_names)
 
-sim = SimulatorPybullet(URDF_NAME, DT, q_init, 12, robot, controlled_joint_names, contact_frame_names, guion=False, gravity=[0, 0.0, -9.81])
+sim = SimulatorPybullet(URDF_NAME, DT, q_init, 12, robot, controlled_joint_names, contact_frame_names, guion=GUION, gravity=[0, 0.0, -9.81])
 
 N = len(q_arr)-1
 
 print('sim.robotId: ', sim.robotId)
-fm = ForceMonitor(sim.robotId, 0, sim.pyb_endeff_ids)
+fm = ForceMonitor(sim.robotId, 0, sim.pyb_ct_frame_ids)
 
 delays = []
 v_prev = np.zeros(18)
@@ -189,8 +189,6 @@ for i in range(N):
     sim.retrieve_pyb_data()
     q = sim.q  # w_p_b, w_q_b, qa
     v = sim.v  # nu_b, va
-    dv = (v - v_prev)/DT
-    v_prev = v
     c, dc = robot.com(q, v)
     # print('Robot MASS: ', robot.data.mass[0])
     b_h = robot.centroidalMomentum(q, v)
@@ -224,16 +222,19 @@ for i in range(N):
     pyb.stepSimulation()
 
     sim.retrieve_pyb_data()
-    q = sim.q  # w_p_b, w_q_b, qa
-    v = sim.v  # nu_b, va
-    dv = (v - v_prev)/DT
-    v_prev = v
-    c, dc = robot.com(q, v)
-    b_h = robot.centroidalMomentum(q, v)
-    wRb = pin.Quaternion(q[3:7].reshape((4,1))).toRotationMatrix()
-    w_Lc = wRb @ b_h.angular
+    q2 = sim.q  # w_p_b, w_q_b, qa
+    v2 = sim.v  # nu_b, va
 
-    tau_next = compute_control_torque(q_arr[i+1,7:], v_arr[i+1,6:], tau_arr[i+1,6:], q[7:], v[6:])
+    # COMPUTING ACCELERATION
+    # dv = (v - v_prev)/DT       # Backward difference
+    # dv = (v2 - v)/DT           # Forward difference
+    dv = (v2 - v_prev)/(2*DT)  # Central difference
+    data_cs['dv'] = dv
+
+    # Updating previous velocity
+    v_prev = v
+
+    tau_next = compute_control_torque(q_arr[i,7:], v_arr[i,6:], tau_arr[i+1,6:], q[7:], v[6:])
 
 
 
@@ -272,12 +273,11 @@ for i in range(N):
     ftot_pyb_lst.append(ftot_pyb)
     ###################################
 
-    # data AFTER simulation step
-    data_cs['dv'] = dv
-    data_cs['tau'] = tau_next  # apparently slightly better, to verify
-    # data_cs['tau'] = tau
-    # data_cs.update(dic_forces_tau)
-    data_cs.update(dic_forces_pyb)
+    # storing torque
+    # data_cs['tau'] = tau_next  # apparently slightly better, to verify
+    data_cs['tau'] = tau
+    data_cs.update(dic_forces_tau)
+    # data_cs.update(dic_forces_pyb)
 
     logger.append_data(data_cs)
 
