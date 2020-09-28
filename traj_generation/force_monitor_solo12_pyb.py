@@ -16,7 +16,11 @@ class ForceMonitor:
         self.robotId = robotId
         self.planeId = planeId
         self.contact_links_ids = contact_links_ids
-        self.contact_links_ids = [idx-1 for idx in self.contact_links_ids]  # TODO: only for no feet!
+
+        # TODO: only for no feet!
+        # link in contact with the ground: XX_FOOT reduced to a micrometer sphere away from the ankle joint
+        # joint frame corresponding to this contact: XX_FOOT_TIP
+        self.contact_links_ids = [idx-1 for idx in self.contact_links_ids]
 
 
     def getContactPoint(self, contactPoints):

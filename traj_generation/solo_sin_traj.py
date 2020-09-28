@@ -6,9 +6,9 @@ from tsid_wrapper import TsidWrapper
 import conf_solo12 as conf
 from traj_logger import TrajLogger
 
-TRAJ_NAME = 'solo_sin_y_trunk'
+TRAJ_NAME = 'solo_sin_y_notrunk'
 # UNCOMMENT TO DISABLE TRUNK TASK
-# conf.w_trunk = 0
+conf.w_trunk = 0
 
 dt = conf.dt
 tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
@@ -65,6 +65,7 @@ for i in range(0, conf.N_SIMULATION):
 
     # integrate one step
     q, v = tsid_solo.integrate_dv_R3SO3(q, v, dv, dt)
+    # q, v = tsid_solo.integrate_dv(q, v, dv, dt)
     t += dt
 
     if (i % conf.PRINT_N) == 0:

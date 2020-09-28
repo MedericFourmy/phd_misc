@@ -8,13 +8,16 @@ import pinocchio as pin
 
 class SimulatorPybullet:
 
-    def __init__(self, urdf_name, dt, q_init, nqa, pinocchio_robot, joint_names, endeff_names, gravity=[0,0,-9.81]):
-        
+    def __init__(self, urdf_name, dt, q_init, nqa, pinocchio_robot, joint_names, contact_frame_names, guion=True, gravity=[0,0,-9.81]):
+        """
+        contact_frame_names: ! to work, contact_frame_names needs to be included in the joint frame names
+        """
         
         # Start the client for PyBullet
-        physicsClient = pyb.connect(pyb.GUI)
-        # pyb.GUI for graphical version
-        # pyb.DIRECT for non-graphical version
+        if guion:
+            pyb.connect(pyb.GUI)
+        else:
+            pyb.connect(pyb.DIRECT)
 
         # Load horizontal plane
         pyb.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -30,48 +33,31 @@ class SimulatorPybullet:
 
         pyb.setAdditionalSearchPath(
             "/opt/openrobots/share/example-robot-data/robots/solo_description/robots")
-        
+
         flags = pyb.URDF_USE_INERTIA_FROM_FILE  # Necessary?
         self.robotId = pyb.loadURDF(
-            urdf_name, robotStartPos, robotStartOrientation)
+            urdf_name, robotStartPos, robotStartOrientation, flags=flags)
 
         # get joint ids informations in pyb and pinocchio
         bullet_joint_map = {}
         for ji in range(pyb.getNumJoints(self.robotId)):
             bullet_joint_map[pyb.getJointInfo(self.robotId, ji)[1].decode('UTF-8')] = ji
-        
-        print()
-        print('JOINTS')
-        print('bullet_joint_map')
-        print(len(bullet_joint_map))
-        print(bullet_joint_map)
-        print('Pinocchio frame names')
-        print(len(pinocchio_robot.model.names))
-        print([joint for joint in pinocchio_robot.model.names])
-
 
         self.bullet_joint_ids = np.array([bullet_joint_map[name] for name in joint_names])
         self.pinocchio_joint_ids = np.array([pinocchio_robot.model.getJointId(name) for name in joint_names])
-        
-        print('joint_names')
-        print(joint_names)
-        print('bullet_joint_ids')
-        print(self.bullet_joint_ids)
-        print('pinocchio_joint_ids')
-        print(self.pinocchio_joint_ids)
 
         # In pybullet, the contact wrench is measured at a joint. In our case
         # the joint is fixed joint. Pinocchio doesn't add fixed joints into the joint
         # list. Therefore, the computation is done wrt to the frame of the fixed joint.
-        self.pyb_endeff_ids = [bullet_joint_map[name] for name in endeff_names]
-        self.pin_endeff_ids = [pinocchio_robot.model.getFrameId(name) for name in endeff_names]
-
+        self.pyb_ct_frame_ids = [bullet_joint_map[name] for name in contact_frame_names]
+        self.pin_ct_frame_ids = [pinocchio_robot.model.getFrameId(name) for name in contact_frame_names]
 
         # Disable default motor control for revolute joints
         pyb.setJointMotorControlArray(self.robotId, 
                                       jointIndices=self.bullet_joint_ids, 
                                       controlMode=pyb.VELOCITY_CONTROL,
                                       forces=[0.0 for _ in self.bullet_joint_ids])
+                                      
         # Initialize the robot in a specific configuration
         pyb.resetJointStatesMultiDof(self.robotId, self.bullet_joint_ids, q_a)
 
