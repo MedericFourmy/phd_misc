@@ -20,6 +20,8 @@ class ImuLegKF:
         # [o_p_ob, o_v_o1, o_p_ol1, o_p_ol1, o_p_ol1, o_p_ol3]
         self.x = x_init
 
+        self.state_size = 6+len(contact_ids)*3
+
         # state cov
         self.P = np.diag(std_prior)**2
 
@@ -97,16 +99,9 @@ class ImuLegKF:
         if measurements[1]:
             for i, cid in enumerate(self.contact_ids):
                 if feets_in_contact[i]:
-                    # b_T_l = self.robot.framePlacement(q, cid, update_kinematics=False)
-                    # b_p_bl = b_T_l.translation
-                    # bRl = b_T_l.rotation
-
-                    # l_v_bl = self.robot.frameVelocity(q, dq, cid, update_kinematics=False).linear
-                    # # measurement: velocity in world frame
+                    # measurement: velocity in world frame
                     o_v_ob = base_vel_from_stable_contact(self.robot, q_static, dq_static, i_omg_oi, o_R_i, cid)
                     o_v_oi = o_v_ob + o_R_i @ np.cross(i_omg_oi, self.i_R_b@self.b_p_bi)  # velocity composition law
-                    # print('KF ', cid)
-                    # print('norm ratio o_v_ob/o_v_oi: ', np.linalg.norm(o_v_ob)/np.linalg.norm(o_v_oi))
 
                     R_vel = self.vel_meas_cov(q_static, i_omg_oi, o_R_i, cid)
 
@@ -142,8 +137,8 @@ class ImuLegKF:
             K = self.P @ H.T / Z
             dx = K * z
             # reshape to avoid confusion between inner and outer product when multiplying 2 1d arrays
-            K = K.reshape((18,1))
-            H = H.reshape((1,18))
+            K = K.reshape((self.state_size,1))
+            H = H.reshape((1,self.state_size))
         self.x = self.x + dx
         self.P = self.P - K @ H @ self.P
         
@@ -168,9 +163,8 @@ class ImuLegKF:
 
         return Q
 
-    @staticmethod
-    def vel_meas_H():
-        H = np.zeros((3, 6*3))
+    def vel_meas_H(self):
+        H = np.zeros((3, self.state_size))
         H[0:3,3:6] = np.eye(3)
         return H
     
@@ -188,9 +182,8 @@ class ImuLegKF:
         # return o_Jl @ self.Qdqa @ o_Jl.T + self.Qkin
         return o_Jl @ self.Qqa @ o_Jl.T + self.Qkin
     
-    @staticmethod
-    def relp_meas_H(cid_idx):
-        H = np.zeros((3,6*3))
+    def relp_meas_H(self, cid_idx):
+        H = np.zeros((3,self.state_size))
         H[:3,:3] = - np.eye(3)
         H[:3,cid_idx:cid_idx+3] = np.eye(3) 
         return H
@@ -247,12 +240,8 @@ class ImuLegCF:
             if feets_in_contact[i]:            
                 o_v_ob = base_vel_from_stable_contact(self.robot, q_static, dq_static, i_omg_oi, o_R_i, cid)
                 o_v_oi = o_v_ob + o_R_i @ np.cross(i_omg_oi, self.i_R_b@self.b_p_bi)
-                # print('CF ', cid)
-                # print('norm ratio o_v_ob/o_v_oi: ', np.linalg.norm(o_v_ob)/np.linalg.norm(o_v_oi))
                 o_vi_kin_mean += o_v_oi
 
-        # print(o_vb_kin_mean)
-        # print(len(feets_in_contact))
         o_vi_kin_mean /= len(feets_in_contact)
         self.v_kin_lp = self.alpha*self.v_kin_lp + (1 - self.alpha)*o_vi_kin_mean
 

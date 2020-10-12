@@ -31,6 +31,8 @@ model = robot.model
 data = robot.data
 
 LEGS = ['FL', 'FR', 'HL', 'HR']
+# LEGS = ['FL', 'FR', 'HR'] # !!! remove HL because of faulty leg in Logs_09_10_20_soir dataset 
+nb_feet = len(LEGS)
 contact_frame_names = [leg+'_ANKLE' for leg in LEGS]
 contact_frame_ids = [robot.model.getFrameId(leg_name) for leg_name in contact_frame_names]
 
@@ -110,16 +112,13 @@ o_p_ol_lst = [robot.framePlacement(q, leg_id, update_kinematics=False).translati
 cforces_est = ContactForcesEstimator(robot, contact_frame_ids)
 
 # define a prior for the FK state
-x_init = np.concatenate((o_p_oi, o_v_oi, o_p_ol_lst[0], o_p_ol_lst[1], o_p_ol_lst[2], o_p_ol_lst[3]))
+x_init = np.concatenate((o_p_oi, o_v_oi, *o_p_ol_lst))
 
 # prior covariances
 std_p_prior = 0.01*np.ones(3)
 std_v_prior = 0.01*np.ones(3)
-std_pl0_prior = 0.1*np.ones(3)
-std_pl1_prior = 0.1*np.ones(3)
-std_pl2_prior = 0.1*np.ones(3)
-std_pl3_prior = 0.1*np.ones(3)
-std_prior = np.concatenate((std_p_prior, std_v_prior, std_pl0_prior, std_pl1_prior, std_pl2_prior, std_pl3_prior))
+std_pl_priors = 0.1*np.ones(3*nb_feet)
+std_prior = np.concatenate((std_p_prior, std_v_prior, std_pl_priors))
 
 # filter noises
 std_kf_dic = {
@@ -141,9 +140,9 @@ x_arr_cf = np.zeros((N, 6))
 i_v_oi_kf_arr = np.zeros((N, 3))
 i_v_oi_cf_arr = np.zeros((N, 3))
 f_sum_arr = np.zeros((N,3))
-fz_arr = np.zeros((N,4))
-feets_in_contact_arr= np.zeros((N,4))
-contact_offset_viz = np.array([0.1, -0.1, 0.05, -0.05])
+fz_arr = np.zeros((N,nb_feet))
+feets_in_contact_arr= np.zeros((N,nb_feet))
+contact_offset_viz = np.array([0.1, -0.1, 0.05, -0.05])[:nb_feet]
 
 # base estimates for post processing
 o_R_b_arr = np.zeros((N,3,3))
@@ -211,135 +210,30 @@ res_arr_dic['o_p_ob_kf'] = o_p_ob_kf_arr
 res_arr_dic['o_v_ob_kf'] = o_v_ob_kf_arr
 res_arr_dic['o_p_ob_cf'] = o_p_ob_cf_arr
 res_arr_dic['o_v_ob_cf'] = o_v_ob_cf_arr
-fname = data_file.split('/')[-1]
 
 
-np.savez(DATA_FOLDER_RESULTS+fname, **res_arr_dic)
-print(DATA_FOLDER_RESULTS+fname, ' saved')
+np.savez(DATA_FOLDER_RESULTS+data_file, **res_arr_dic)
+print(DATA_FOLDER_RESULTS+data_file, ' saved')
 
+# PLOT DELAYS
 plt.figure('KF propa+correct time (ms)')
 plt.plot(t_arr, delays)
+
+# contacts
+plt.figure('Normal forces')
+for i in range(nb_feet):
+    plt.plot(t_arr, fz_arr[:,i], label='fz '+contact_frame_names[i])
+plt.legend()
+
+plt.figure('Total forces world frame')
+plt.plot(t_arr, f_sum_arr[:,0], label='f sum x')
+plt.plot(t_arr, f_sum_arr[:,1], label='f sum y')
+plt.plot(t_arr, f_sum_arr[:,2], label='f sum z')
+plt.legend()
+
+plt.figure('Contacts')
+for i in range(nb_feet):
+    plt.plot(t_arr, feets_in_contact_arr[:,i], '.', label=contact_frame_names[i], markersize=1)
+plt.legend()
+
 plt.show()
-
-# i_v_oi_err_KF = i_v_oi_kf_arr - arr_dic['m_v_wm'][:,:3]  # in case m_v_wm is 6D... 
-# i_v_oi_err_CF = i_v_oi_cf_arr - arr_dic['m_v_wm'][:,:3]  # in case m_v_wm is 6D... 
-
-
-# def rmse(err_arr):
-#     return np.sqrt(np.mean(err_arr**2))
-
-# # print('Position RMSE')
-# # print('p_err_CF_x: ', rmse(p_err_CF_x))
-# # print('p_err_CF_y: ', rmse(p_err_CF_y))
-# # print('p_err_CF_z: ', rmse(p_err_CF_z))
-# # print('p_err_KF_x: ', rmse(p_err_KF_x))
-# # print('p_err_KF_y: ', rmse(p_err_KF_y))
-# # print('p_err_KF_z: ', rmse(p_err_KF_z))
-
-# print()
-# print('Velocity RMSE')
-# print('v_err_KF_x: ', rmse(i_v_oi_err_KF[:,0]))
-# print('v_err_KF_y: ', rmse(i_v_oi_err_KF[:,1]))
-# print('v_err_KF_z: ', rmse(i_v_oi_err_KF[:,2]))
-# print('v_err_CF_x: ', rmse(i_v_oi_err_CF[:,0]))
-# print('v_err_CF_y: ', rmse(i_v_oi_err_CF[:,1]))
-# print('v_err_CF_z: ', rmse(i_v_oi_err_CF[:,2]))
-
-# #############
-# # ERROR plots
-# #############
-
-
-# plt.figure('Kalman position')
-# plt.plot(t_arr, x_arr_kf[:,0], 'r', label='x err')
-# plt.plot(t_arr, x_arr_kf[:,1], 'g', label='y err')
-# plt.plot(t_arr, x_arr_kf[:,2], 'b', label='z err')
-# plt.legend()
-
-# plt.figure('Complementary position')
-# plt.plot(t_arr, x_arr_cf[:,0], 'r', label='x err')
-# plt.plot(t_arr, x_arr_cf[:,1], 'g', label='y err')
-# plt.plot(t_arr, x_arr_cf[:,2], 'b', label='z err')
-# plt.legend()
-
-# plt.figure('Kalman velocity errors')
-# plt.plot(t_arr, i_v_oi_err_KF[:,0], 'r', label='vx err')
-# plt.plot(t_arr, i_v_oi_err_KF[:,1], 'g', label='vy err')
-# plt.plot(t_arr, i_v_oi_err_KF[:,2], 'b', label='vz err')
-# plt.legend()
-
-
-
-# plt.figure('Complementary velocity errors')
-# plt.plot(t_arr, i_v_oi_err_CF[:,0], 'r', label='vx err')
-# plt.plot(t_arr, i_v_oi_err_CF[:,1], 'g', label='vy err')
-# plt.plot(t_arr, i_v_oi_err_CF[:,2], 'b', label='vz err')
-# plt.legend()
-
-
-
-# # contacts
-# plt.figure('Normal forces')
-# for i in range(4):
-#     plt.plot(t_arr, fz_arr[:,i], label='fz '+contact_frame_names[i])
-# plt.legend()
-
-# plt.figure('Total forces world frame')
-# plt.plot(t_arr, f_sum_arr[:,0], label='f sum x')
-# plt.plot(t_arr, f_sum_arr[:,1], label='f sum y')
-# plt.plot(t_arr, f_sum_arr[:,2], label='f sum z')
-# plt.legend()
-
-# # torques
-# plt.figure('Torques')
-# skip = 2
-# if arr_dic['tau'].shape[1] == 12:
-#     skip += 1
-# for i in range(4):
-#     plt.subplot(4,1,i+1)
-#     for j in range(skip):
-#         plt.plot(t_arr, arr_dic['tau'][:,skip*i+j],   label=contact_frame_names[i]+str(skip*i+j))
-#     plt.legend()
-
-# plt.figure('Contacts')
-# for i in range(4):
-#     plt.plot(t_arr, feets_in_contact_arr[:,i], '.', label=contact_frame_names[i], markersize=1)
-# plt.legend()
-
-# ############
-# # traj plots
-# ############
-
-
-
-# plt.figure('KF i_v_oi vs mocap m_v_wm')
-# plt.subplot(3,1,1)
-# plt.plot(t_arr, i_v_oi_kf_arr[:,0], 'b.', label='x est', markersize=1)
-# plt.plot(t_arr, arr_dic['m_v_wm'][:,0], 'r.',  label='x gtr', markersize=1)
-# plt.subplot(3,1,2)
-# plt.plot(t_arr, i_v_oi_kf_arr[:,1], 'b.', label='y est', markersize=1)
-# plt.plot(t_arr, arr_dic['m_v_wm'][:,1], 'r.',  label='y gtr', markersize=1)
-# plt.subplot(3,1,3)
-# plt.plot(t_arr, i_v_oi_kf_arr[:,2], 'b.', label='z est', markersize=1)
-# plt.plot(t_arr, arr_dic['m_v_wm'][:,2], 'r.',  label='z gtr', markersize=1)
-# plt.legend()
-
-
-
-# # POST PROCESS
-# # - rotate estimation velocity according to initial mocap orientation
-# # - translate the whole trajectory 
-
-
-# # Above plots
-# plt.figure('XY position traj KF')
-# plt.plot(x_arr_kf[:,0], x_arr_kf[:,1], label='KF')
-# plt.plot(arr_dic['w_p_wm'][:,0], arr_dic['w_p_wm'][:,1], label='MOCAP')
-# plt.legend()
-
-# plt.figure('XY position traj CF')
-# plt.plot(x_arr_cf[:,0], x_arr_cf[:,1], label='CF')
-# plt.plot(arr_dic['w_p_wm'][:,0], arr_dic['w_p_wm'][:,1], label='MOCAP')
-# plt.legend()
-
-# plt.show()

@@ -19,9 +19,7 @@ DATA_FOLDER_RESULTS = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experimen
 # data_file = 'Logs_09_10_20_soir/data_2020_10_09_18_58.npz'
 # data_file = 'Logs_09_10_20_soir/data_2020_10_09_19_00.npz'
 # data_file = 'Logs_09_10_20_soir/data_2020_10_09_19_02.npz'
-# data_file = 'Logs_09_10_20_soir/data_2020_10_09_19_03.npz'
-data_file = 'data_2020_10_09_19_03.npz'
-# data_file = 'Logs_09_10_20_soir/data_2020_10_09_19_03.npz_bak'
+data_file = 'Logs_09_10_20_soir/data_2020_10_09_19_03.npz'
 # data_file = 'Logs_09_10_20_soir/data_2020_10_09_19_05.npz'
 # data_file = 'Logs_09_10_20_soir/data_2020_10_09_19_06.npz'
 
