@@ -10,18 +10,15 @@ def screw(v):
 
 class ImuLegKF:
 
-    def __init__(self, robot, dt, contact_ids, x_init, std_prior, 
-                 std_foot, std_foot_vel, std_acc, std_wb, std_qa, std_dqa, std_kin, std_hfoot):
+    def __init__(self, robot, dt, contact_ids, x_init, b_T_i, std_prior, std_kf_dic):
         self.robot = robot
         # stores a look up table for contact state position
-        print(contact_ids)
+        self.contact_ids = contact_ids
         self.cids_idx = {cid: 6+3*i for i, cid in enumerate(contact_ids)}
-        print(self.cids_idx)
         # state structure: [base position, base velocity, [feet position] ] 
         # all quantities expressed in universe frame
         # [o_p_ob, o_v_o1, o_p_ol1, o_p_ol1, o_p_ol1, o_p_ol3]
         self.x = x_init
-        # helpers to retrieve parts of the state variable
 
         # state cov
         self.P = np.diag(std_prior)**2
@@ -29,91 +26,103 @@ class ImuLegKF:
         # discretization period
         self.dt = dt
 
-        # discretized noise std
-        self.std_acc = std_acc           # noise on IMU acceleration measurement (if isotropic, does not matter if in body or inertial frame)
+        # fixed relative transformation between base and imu
+        self.b_T_i = b_T_i
+        self.i_T_b = self.b_T_i.inverse()
+        self.i_R_b =  self.b_T_i.rotation.T
+        self.b_p_bi = self.b_T_i.translation
 
         # static jacs and covs
-        self.Qacc = std_acc**2 * np.eye(3)
-        self.Qwb = std_wb**2 * np.eye(3)
-        self.Qqa = std_qa**2 * np.eye(self.robot.model.nv - 6)
-        self.Qdqa = std_dqa**2 * np.eye(self.robot.model.nv - 6)
-        self.Qfoot = std_foot**2 * np.eye(3)
-        self.Qkin = std_kin**2 * np.eye(3)
-        self.Qhfoot = std_hfoot**2
+        self.Qacc = std_kf_dic['std_acc']**2 * np.eye(3)
+        self.Qwb = std_kf_dic['std_wb']**2 * np.eye(3)
+        self.Qqa = std_kf_dic['std_qa']**2 * np.eye(self.robot.model.nv - 6)
+        self.Qdqa = std_kf_dic['std_dqa']**2 * np.eye(self.robot.model.nv - 6)
+        self.Qfoot = std_kf_dic['std_foot']**2 * np.eye(3)
+        self.Qkin = std_kf_dic['std_kin']**2 * np.eye(3)
+        self.Qhfoot = std_kf_dic['std_hfoot']**2
         
         # propagation
         self.Fk = self.propagation_jac()
-        self.Qk = self.propagation_cov()
 
         self.H_vel = self.vel_meas_H()
-        # self.R_vel = self.std_foot_vel**2 * np.eye(3)
-        
         self.H_relp_dic = {cid: self.relp_meas_H(cid_idx) for cid, cid_idx in self.cids_idx.items()}
-        self.R_relp = std_foot_vel**2 * np.eye(3)
     
     def get_state(self):
         return self.x
 
-    def propagate(self, o_a_ob, feet_in_contact_ids):
+    def propagate(self, o_a_o_i, feets_in_contact):
         """
-        o_a_ob: acceleration of the base wrt world frame in world frame (oRb*b_am + o_g)
+        o_a_o_i: acceleration of the imu wrt world frame in world frame (o_R_i*imu_acc + o_g)
         (IMU proper acceleration rotated in world frame)
-        feet_in_contact_ids: options
+        feets_in_contact: options
              - size 4 boolean array
              - 
         """
         # state propagation
-        self.x[0:3] += self.x[3:6] * self.dt + 0.5*o_a_ob*self.dt**2
-        self.x[3:6] += o_a_ob*self.dt
+        self.x[0:3] += self.x[3:6] * self.dt + 0.5*o_a_o_i*self.dt**2
+        self.x[3:6] += o_a_o_i*self.dt
         
         # cov propagation
-        # TODO: adjust Qk depending on feet in contact?
+        # adjust Qk depending on feet in contact?
+        self.Qk = self.propagation_cov(feets_in_contact)
+
         self.P = self.Fk @ self.P @ self.Fk.T + self.Qk
 
-    def correct(self, qa, dqa, oRb, b_wb, feet_in_contact_ids):
+    def correct(self, qa, dqa, o_R_i, i_omg_oi, feets_in_contact, measurements=(1,1,1)):
+        """
+        measurements: which measurements to use -> geometry?, differential?, zero height?
+        """
         # just to be sure we do not have base placement/velocity in q and dq
-        q = np.concatenate([np.array(6*[0]+[1]), qa])
-        dq = np.concatenate([np.zeros(6), dqa])
+        q_static = np.concatenate([np.array(6*[0]+[1]), qa])
+        dq_static = np.concatenate([np.zeros(6), dqa])
         # update the robot state, freeflyer at the universe not moving
-        self.robot.forwardKinematics(q, dq)
+        self.robot.forwardKinematics(q_static, dq_static)
         #################
         # Geometry update
         #################
-        # for each foot (contact or not) update position using kinematics
+        # for each foot (in contact or not) update position using kinematics
         # Adapt cov if in conact or not
-        for cid in self.cids_idx:
-            o_p_bl = oRb @ self.robot.framePlacement(q, cid, update_kinematics=False).translation
-            R_relp = self.relp_cov(q, oRb, cid)
-            self.kalman_update(o_p_bl, self.H_relp_dic[cid], R_relp)
+        if measurements[0]:
+            for cid in self.cids_idx:
+                b_p_bl = self.robot.framePlacement(q_static, cid, update_kinematics=False).translation
+                i_p_il =  self.i_T_b * b_p_bl 
+                o_p_il = o_R_i @ i_p_il
+                R_relp = self.relp_cov(q_static, o_R_i, cid)
+                self.kalman_update(o_p_il, self.H_relp_dic[cid], R_relp)
 
         ################################
         # differential kinematics update
         ################################
         # For feet in contact only, use the zero velocity assumption
-        for cid in feet_in_contact_ids:
-            # b_T_l = self.robot.framePlacement(q, cid, update_kinematics=False)
-            # b_p_bl = b_T_l.translation
-            # bRl = b_T_l.rotation
+        if measurements[1]:
+            for i, cid in enumerate(self.contact_ids):
+                if feets_in_contact[i]:
+                    # b_T_l = self.robot.framePlacement(q, cid, update_kinematics=False)
+                    # b_p_bl = b_T_l.translation
+                    # bRl = b_T_l.rotation
 
-            # l_v_bl = self.robot.frameVelocity(q, dq, cid, update_kinematics=False).linear
-            # # measurement: velocity in world frame
-            # b_v_ob = - bRl @ l_v_bl + np.cross(b_p_bl, b_wb)
-            # o_v_ob = oRb @ b_v_ob
-            o_v_ob = base_vel_from_stable_contact(self.robot, q, dq, b_wb, oRb, cid)
+                    # l_v_bl = self.robot.frameVelocity(q, dq, cid, update_kinematics=False).linear
+                    # # measurement: velocity in world frame
+                    o_v_ob = base_vel_from_stable_contact(self.robot, q_static, dq_static, i_omg_oi, o_R_i, cid)
+                    o_v_oi = o_v_ob + o_R_i @ np.cross(i_omg_oi, self.i_R_b@self.b_p_bi)  # velocity composition law
+                    # print('KF ', cid)
+                    # print('norm ratio o_v_ob/o_v_oi: ', np.linalg.norm(o_v_ob)/np.linalg.norm(o_v_oi))
 
-            R_vel = self.vel_meas_cov(q, b_wb, oRb, cid)
+                    R_vel = self.vel_meas_cov(q_static, i_omg_oi, o_R_i, cid)
 
-            self.kalman_update(o_v_ob, self.H_vel, R_vel)
+                    self.kalman_update(o_v_ob, self.H_vel, R_vel)
 
         # ####################################
         # # foot in contact zero height update
         # ####################################
-        # for cid in feet_in_contact_ids:
-        #     # zero height update
-        #     hfoot = 0.0
-        #     H = np.zeros(6*3)
-        #     H[self.cids_idx[cid]+2] = 1
-        #     self.kalman_update(hfoot, H, self.Qhfoot)
+        if measurements[2]:
+            for i, cid in enumerate(self.contact_ids):
+                if feets_in_contact[i]:        
+                    # zero height update
+                    hfoot = 0.0
+                    H = np.zeros(6*3)
+                    H[self.cids_idx[cid]+2] = 1
+                    self.kalman_update(hfoot, H, self.Qhfoot)
 
     def kalman_update(self, y, H, R):
         # general unoptimized kalman update
@@ -145,14 +154,18 @@ class ImuLegKF:
         F[0:3,3:6] = self.dt*np.eye(3)
         return F
 
-    def propagation_cov(self):
+    def propagation_cov(self, feets_in_contact):
         Q = np.zeros((self.x.shape[0], self.x.shape[0]))
         Q[0:3,0:3] = self.dt**2 * self.Qacc / 4
         Q[0:3,3:6] = self.dt    * self.Qacc / 2
         Q[3:6,0:3] = self.dt    * self.Qacc / 2
         Q[3:6,3:6] = self.Qacc
-        for i_fi in self.cids_idx.values():
-            Q[i_fi:i_fi+3,i_fi:i_fi+3] = self.Qfoot
+        for i, i_fi in enumerate(self.cids_idx.values()):
+            if feets_in_contact[i]:
+                Q[i_fi:i_fi+3,i_fi:i_fi+3] = self.Qfoot
+            else:
+                Q[i_fi:i_fi+3,i_fi:i_fi+3] = 10000*self.Qfoot
+
         return Q
 
     @staticmethod
@@ -161,18 +174,19 @@ class ImuLegKF:
         H[0:3,3:6] = np.eye(3)
         return H
     
-    def vel_meas_cov(self, q, wb, oRb, cid):
+    def vel_meas_cov(self, q, wb, o_R_i, cid):
         wbx = screw(wb)
         bTl = self.robot.framePlacement(q, cid, update_kinematics=False)
         b_Jl = bTl.rotation @ self.robot.computeFrameJacobian(q, cid)[:3,6:]
-        o_Jl = oRb @ b_Jl 
+        o_Jl = o_R_i @ b_Jl 
         b_p_bl_x = screw(bTl.translation)
         return - o_Jl @ self.Qdqa @ o_Jl.T - b_p_bl_x @ self.Qwb @ b_p_bl_x + wbx @ b_Jl @ self.Qqa @ b_Jl.T @ wbx
  
-    def relp_cov(self, q, oRb, cid):
+    def relp_cov(self, q, o_R_i, cid):
         bTl = self.robot.framePlacement(q, cid, update_kinematics=False)
-        o_Jl = oRb @ bTl.rotation @ self.robot.computeFrameJacobian(q, cid)[:3,6:]
-        return o_Jl @ self.Qdqa @ o_Jl.T + self.Qkin
+        o_Jl = o_R_i @ bTl.rotation @ self.robot.computeFrameJacobian(q, cid)[:3,6:]
+        # return o_Jl @ self.Qdqa @ o_Jl.T + self.Qkin
+        return o_Jl @ self.Qqa @ o_Jl.T + self.Qkin
     
     @staticmethod
     def relp_meas_H(cid_idx):
@@ -185,10 +199,16 @@ class ImuLegKF:
 
 class ImuLegCF:
 
-    def __init__(self, robot, dt, contact_ids, x_init):
+    def __init__(self, robot, dt, contact_ids, x_init, b_T_i):
         self.robot = robot
+        self.contact_ids = contact_ids
         # [o_p_ob, o_v_o1]
         self.x = x_init
+
+        # fixed relative transformation between base and imu
+        self.b_T_i = b_T_i
+        self.i_R_b =  self.b_T_i.rotation.T
+        self.b_p_bi = self.b_T_i.translation
 
         # discretization period
         self.dt = dt
@@ -202,16 +222,16 @@ class ImuLegCF:
     def get_state(self):
         return self.x
 
-    def update_state(self, o_acc, qa, dqa, b_wb, oRb, feet_in_contact_ids):
-        if len(feet_in_contact_ids) == 0:
-            # no feet in contact, nothin to do
+    def update_state(self, o_acc, qa, dqa, i_omg_oi, o_R_i, feets_in_contact):
+        if sum(feets_in_contact) == 0:
+            # no feet in contact, nothing to do
             return
             
         # just to be sure we do not have base placement/velocity in q and dq
-        q = np.concatenate([np.array(6*[0]+[1]), qa])
-        dq = np.concatenate([np.zeros(6), dqa])
+        q_static = np.concatenate([np.array(6*[0]+[1]), qa])
+        dq_static = np.concatenate([np.zeros(6), dqa])
         # update the robot state, freeflyer at the universe not moving
-        self.robot.forwardKinematics(q, dq)
+        self.robot.forwardKinematics(q_static, dq_static)
 
         # integrate position
         self.x[:3] += self.x[3:6]*self.dt + 0.5*o_acc*self.dt**2
@@ -222,20 +242,28 @@ class ImuLegCF:
         self.v_imu_hp = self.alpha*(self.v_imu_int - v_imu_int_prev + self.v_imu_hp)
 
         # get current velocity mean from contacts
-        o_vb_kin_mean = np.zeros(3)
-        for cid in feet_in_contact_ids:
-            o_vb_kin_mean += base_vel_from_stable_contact(self.robot, q, dq, b_wb, oRb, cid)
+        o_vi_kin_mean = np.zeros(3)
+        for i, cid in enumerate(self.contact_ids):
+            if feets_in_contact[i]:            
+                o_v_ob = base_vel_from_stable_contact(self.robot, q_static, dq_static, i_omg_oi, o_R_i, cid)
+                o_v_oi = o_v_ob + o_R_i @ np.cross(i_omg_oi, self.i_R_b@self.b_p_bi)
+                # print('CF ', cid)
+                # print('norm ratio o_v_ob/o_v_oi: ', np.linalg.norm(o_v_ob)/np.linalg.norm(o_v_oi))
+                o_vi_kin_mean += o_v_oi
+
         # print(o_vb_kin_mean)
-        # print(len(feet_in_contact_ids))
-        o_vb_kin_mean /= len(feet_in_contact_ids)
-        self.v_kin_lp = self.alpha*self.v_kin_lp + (1 - self.alpha)*o_vb_kin_mean
+        # print(len(feets_in_contact))
+        o_vi_kin_mean /= len(feets_in_contact)
+        self.v_kin_lp = self.alpha*self.v_kin_lp + (1 - self.alpha)*o_vi_kin_mean
 
         self.x[3:6] = self.v_kin_lp + self.v_imu_hp
 
 
-def base_vel_from_stable_contact(robot, q, dq, b_wb, oRb, cid):
+def base_vel_from_stable_contact(robot, q, dq, i_omg_oi, o_R_i, cid):
     """
     Assumes forwardKinematics has been called on the robot object with current q dq
+    And that q = [0,0,0, 0,0,0,1, qa]
+            dq = [0,0,0, 0,0,0, dqa]
     """
     b_T_l = robot.framePlacement(q, cid, update_kinematics=False)
     b_p_bl = b_T_l.translation
@@ -243,5 +271,5 @@ def base_vel_from_stable_contact(robot, q, dq, b_wb, oRb, cid):
 
     l_v_bl = robot.frameVelocity(q, dq, cid, update_kinematics=False).linear
     # measurement: velocity in world frame
-    b_v_ob = - bRl @ l_v_bl + np.cross(b_p_bl, b_wb)
-    return oRb @ b_v_ob
+    b_v_ob = - bRl @ l_v_bl + np.cross(b_p_bl, i_omg_oi)
+    return o_R_i @ b_v_ob
