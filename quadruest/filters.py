@@ -187,7 +187,6 @@ class ImuLegKF:
         H[:3,:3] = - np.eye(3)
         H[:3,cid_idx:cid_idx+3] = np.eye(3) 
         return H
-    
 
 
 class ImuLegCF:

@@ -30,8 +30,8 @@ robot = pin.RobotWrapper.BuildFromURDF(urdf, path, pin.JointModelFreeFlyer())
 model = robot.model
 data = robot.data
 
-LEGS = ['FL', 'FR', 'HL', 'HR']
-# LEGS = ['FL', 'FR', 'HR'] # !!! remove HL because of faulty leg in Logs_09_10_20_soir dataset 
+# LEGS = ['FL', 'FR', 'HL', 'HR']
+LEGS = ['FL', 'FR', 'HR'] # !!! remove HL because of faulty leg in Logs_09_10_20_soir dataset 
 nb_feet = len(LEGS)
 contact_frame_names = [leg+'_ANKLE' for leg in LEGS]
 contact_frame_ids = [robot.model.getFrameId(leg_name) for leg_name in contact_frame_names]
@@ -49,7 +49,7 @@ b_p_bi = b_T_i.translation
 # MEASUREMENTS = (0,0,0)  # nothing happens
 # MEASUREMENTS = (1,0,0)  # only kin
 # MEASUREMENTS = (0,1,0)  # only diff kin
-MEASUREMENTS = (0,1,0)  # all kinematics
+MEASUREMENTS = (1,1,0)  # all kinematics
 # MEASUREMENTS = (1,1,1)  # all kinematics + foot height
 
 ##############################################
@@ -85,7 +85,7 @@ data_file = 'Logs_09_10_20_soir/data_2020_10_09_19_03.npz'
 # data_file = 'Logs_09_10_20_soir/data_2020_10_09_19_06.npz'
 
 arr_dic = read_data_file_laas(DATA_FOLDER+data_file, dt)
-arr_dic = shortened_arr_dic(arr_dic, 2000)
+# arr_dic = shortened_arr_dic(arr_dic, 2000)
 
 t_arr = arr_dic['t']
 N = len(t_arr)
@@ -116,7 +116,7 @@ x_init = np.concatenate((o_p_oi, o_v_oi, *o_p_ol_lst))
 
 # prior covariances
 std_p_prior = 0.01*np.ones(3)
-std_v_prior = 0.01*np.ones(3)
+std_v_prior = 1*np.ones(3)
 std_pl_priors = 0.1*np.ones(3*nb_feet)
 std_prior = np.concatenate((std_p_prior, std_v_prior, std_pl_priors))
 

@@ -44,6 +44,35 @@ o_p_ob_cf_arr = res_arr_dic['o_p_ob_cf']
 o_v_ob_cf_arr = res_arr_dic['o_v_ob_cf']
 
 
+#####################
+# MOCAP VELOCITY
+NB_OVER = 5
+
+# compute filterd mocap velocity
+w_v_wm_filtered_arr = signal.savgol_filter(w_p_wm_arr, window_length=19, polyorder=5, deriv=1, axis=0, delta=dt, mode='mirror')
+w_p_wm_arr_sub = w_p_wm_arr[::NB_OVER]
+w_p_wm_arr_over = w_p_wm_arr_sub.repeat(NB_OVER, axis=0) 
+w_v_wm_arr_sub = signal.savgol_filter(w_p_wm_arr_sub, window_length=19, polyorder=5, deriv=1, axis=0, delta=NB_OVER*dt, mode='mirror')
+w_v_wm_arr_over = w_v_wm_arr_sub.repeat(NB_OVER, axis=0) 
+
+plt.figure('mocap velocity')
+plt.subplot(3,1,1)
+plt.plot(t_arr, w_v_wm_arr[:,0], 'r.', markersize=1, label='vx numdiff')
+plt.plot(t_arr, w_v_wm_filtered_arr[:,0], 'b.', markersize=1, label='vx filtered')
+plt.plot(t_arr, w_v_wm_arr_over[:,0], 'k.', markersize=1, label='vx filtered')
+plt.subplot(3,1,2)
+plt.plot(t_arr, w_v_wm_arr[:,1], 'r.', markersize=1, label='vy numdiff')
+plt.plot(t_arr, w_v_wm_filtered_arr[:,1], 'b.', markersize=1, label='vy filtered')
+plt.plot(t_arr, w_v_wm_arr_over[:,1], 'k.', markersize=1, label='vx filtered better')
+plt.subplot(3,1,3)
+plt.plot(t_arr, w_v_wm_arr[:,2], 'r.', markersize=1, label='vz numdiff')
+plt.plot(t_arr, w_v_wm_filtered_arr[:,2], 'b.', markersize=1, label='vz filtered')
+plt.plot(t_arr, w_v_wm_arr_over[:,2], 'k.', markersize=1, label='vz filtered better')
+plt.legend()
+#####################
+
+
+
 pose_est = np.hstack([t_arr.reshape((N,1)), o_p_ob_kf_arr, o_q_b_arr])
 pose_gtr = np.hstack([t_arr.reshape((N,1)), w_p_wm_arr, w_q_m_arr])
 
@@ -99,31 +128,6 @@ offy = 0.1*(ymax - ymin)
 # line collections don't auto-scale the plot
 plt.xlim(xmin-offx, xmax+offx) 
 plt.ylim(ymin-offy, ymax+offy)
-
-
-NB_OVER = 5
-
-# compute filterd mocap velocity
-w_v_wm_filtered_arr = signal.savgol_filter(w_p_wm_arr, window_length=19, polyorder=5, deriv=1, axis=0, delta=dt, mode='mirror')
-w_p_wm_arr_sub = w_p_wm_arr[::NB_OVER]
-w_p_wm_arr_over = w_p_wm_arr_sub.repeat(NB_OVER, axis=0) 
-w_v_wm_arr_sub = signal.savgol_filter(w_p_wm_arr_sub, window_length=19, polyorder=5, deriv=1, axis=0, delta=NB_OVER*dt, mode='mirror')
-w_v_wm_arr_over = w_v_wm_arr_sub.repeat(NB_OVER, axis=0) 
-
-plt.figure('mocap velocity')
-plt.subplot(3,1,1)
-plt.plot(t_arr, w_v_wm_arr[:,0], 'r.', markersize=1, label='vx numdiff')
-plt.plot(t_arr, w_v_wm_filtered_arr[:,0], 'b.', markersize=1, label='vx filtered')
-plt.plot(t_arr, w_v_wm_arr_over[:,0], 'k.', markersize=1, label='vx filtered')
-plt.subplot(3,1,2)
-plt.plot(t_arr, w_v_wm_arr[:,1], 'r.', markersize=1, label='vy numdiff')
-plt.plot(t_arr, w_v_wm_filtered_arr[:,1], 'b.', markersize=1, label='vy filtered')
-plt.plot(t_arr, w_v_wm_arr_over[:,1], 'k.', markersize=1, label='vx filtered better')
-plt.subplot(3,1,3)
-plt.plot(t_arr, w_v_wm_arr[:,2], 'r.', markersize=1, label='vz numdiff')
-plt.plot(t_arr, w_v_wm_filtered_arr[:,2], 'b.', markersize=1, label='vz filtered')
-plt.plot(t_arr, w_v_wm_arr_over[:,2], 'k.', markersize=1, label='vz filtered better')
-plt.legend()
 
 
 # plt.figure('mocap position')
