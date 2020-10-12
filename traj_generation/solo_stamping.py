@@ -8,11 +8,11 @@ from scipy.stats import logistic
 
 from utils import *
 
-# import conf_solo12 as conf
-# TRAJ_NAME = 'solo_stamping'
+import conf_solo12 as conf
+TRAJ_NAME = 'solo_stamping'
 
-import conf_solo12_nofeet as conf
-TRAJ_NAME = 'solo_stamping_nofeet'
+# import conf_solo12_nofeet as conf
+# TRAJ_NAME = 'solo_stamping_nofeet'
 
 dt = conf.dt
 
@@ -211,8 +211,8 @@ while not end_traj:
         time_start = time.time()
 
 
-# logger.store_csv_trajs(TRAJ_NAME, sep=' ', skip_free_flyer=True)
-logger.store_mcapi_traj(TRAJ_NAME)
+logger.store_csv_trajs(TRAJ_NAME, sep=' ', skip_free_flyer=True)
+# logger.store_mcapi_traj(TRAJ_NAME)
 
 import matplotlib.pyplot as plt
 

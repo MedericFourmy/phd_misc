@@ -12,17 +12,17 @@ class ContactForcesEstimator:
         self.nv = self.robot.model.nv 
         self.contact_frame_id_lst = contact_frame_id_lst
 
-    def compute_contact_forces(self, qa, vqa, oRb, b_vb, b_wb, o_acc, tauj):
+    def compute_contact_forces(self, qa, dqa, oRb, b_vb, b_wb, o_acc, tauj):
         """ 
-        Compute the 3D contact/reaction forces at the 4 solo feet using inverse dynamics.
+        Compute the 3D contact/reaction forces at the solo feet using inverse dynamics.
         Forces are expressed in body frame.
         """
         o_quat_b = pin.Quaternion(oRb).coeffs()
         q  = np.concatenate([np.array([0,0,0]), o_quat_b, qa])  # robot anywhere with orientation estimated from IMU
-        vq = np.concatenate([b_vb, b_wb, vqa])                 # generalized velocity in base frame as pin requires
-        # vq = np.hstack([np.zeros(3), b_wb, vqa])           # generalized velocity in base frame as pin requires
+        vq = np.concatenate([b_vb, b_wb, dqa])                 # generalized velocity in base frame as pin requires
+        # vq = np.hstack([np.zeros(3), b_wb, dqa])           # generalized velocity in base frame as pin requires
         dvq = np.zeros(self.nv)
-        dvq[:3] = oRb.T @ o_acc - np.cross(b_wb, b_vb) # spatial acceleration linear part
+        dvq[:3] = oRb.T @ o_acc - np.cross(b_wb, b_vb) # spatial acceleration linear part, neglecting the rest
 
         taucf = pin.rnea(self.robot.model, self.robot.data, q, vq, dvq) # sum of joint torque + contact torques corresponding to the actuated equations
         taucf[6:] = taucf[6:] - tauj
@@ -45,11 +45,11 @@ class ContactForceEstimatorGeneralizedMomentum:
         self.p0 = np.zeros(self.nv)  # not necessary -> to compute
         self.int = np.zeros(self.nv)
 
-    def compute_contact_forces(self, qa, vqa, oRb, b_vb, b_wb, o_acc, tauj):
+    def compute_contact_forces(self, qa, dqa, oRb, b_vb, b_wb, o_acc, tauj):
         o_quat_b = pin.Quaternion(oRb).coeffs()
         q =  np.concatenate([np.array([0,0,0]), o_quat_b, qa])  # robot anywhere with orientation estimated from IMU
-        vq = np.concatenate([b_vb, b_wb, vqa])                 # generalized velocity in base frame as pin requires
-        # vq = np.hstack([np.zeros(3), b_wb, vqa])           # generalized velocity in base frame as pin requires
+        vq = np.concatenate([b_vb, b_wb, dqa])                 # generalized velocity in base frame as pin requires
+        # vq = np.hstack([np.zeros(3), b_wb, dqa])           # generalized velocity in base frame as pin requires
         C = pin.computeCoriolisMatrix(self.rm, self.rd, q, vq)
         g = pin.computeGeneralizedGravity(self.rm, self.rd, q)
         M = pin.crba(self.rm, self.rd, q)
@@ -64,10 +64,9 @@ class ContactForceEstimatorGeneralizedMomentum:
 def taucf_to_oforces(robot, q, nv, oRb, taucf, contact_frame_id_lst):
     Jlinvel = compute_joint_jac(robot, q, contact_frame_id_lst)
 
-
     # 3 options, same outcomes IF the indices are in the right order for the 3rd:
     # 1) solve the whole system:
-    # o_forces = np.linalg.pinv(Jlinvel.T) @ taucf
+    o_forces = np.linalg.pinv(Jlinvel.T) @ taucf
 
     # 2) remove the "freeflyer" equations:
     # Jlinvel_without_freflyer = Jlinvel[:,6:]
@@ -75,19 +74,24 @@ def taucf_to_oforces(robot, q, nv, oRb, taucf, contact_frame_id_lst):
     # o_forces = np.linalg.pinv(Jlinvel_without_freflyer.T) @ taucf_without_freel
 
     # 3) Use only leg submatrices
-    Jlinvel_without_freflyer = Jlinvel[:,6:]
-    taucf_without_freel = taucf[6:]
-    o_forces = np.zeros(12)
-    for i in range(4):
-        o_forces[3*i:3*i+3] = np.linalg.solve(Jlinvel_without_freflyer[3*i:3*i+3,3*i:3*i+3].T, taucf_without_freel[3*i:3*i+3]) 
+    # Jlinvel_without_freflyer = Jlinvel[:,6:]
+    # taucf_without_freel = taucf[6:]
+    # o_forces = np.zeros(12)
+    # for i in range(4):
+    #     o_forces[3*i:3*i+3] = np.linalg.solve(Jlinvel_without_freflyer[3*i:3*i+3,3*i:3*i+3].T, taucf_without_freel[3*i:3*i+3]) 
 
+    # reshape from
+    # [f0x, f0y, f0z, f1x, ..., f3z]
+    # to
     # [[f0x, f1x, f2x, f3x]
     #        ...y...
     #        ...z...      ]]
-    return o_forces.reshape((4,3)).T
+    # return o_forces.reshape((4,3)).T
+    return o_forces.reshape((len(contact_frame_id_lst),3))
+
 
 def compute_joint_jac(robot, q, cf_ids, world_frame=True):
-    Jlinvel = np.zeros((12, robot.nv))
+    Jlinvel = np.zeros((len(cf_ids)*3, robot.nv))
     for i, frame_id in enumerate(cf_ids):
         if world_frame:
             oTl = robot.framePlacement(q, frame_id, update_kinematics=False)

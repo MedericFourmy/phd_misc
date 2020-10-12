@@ -97,7 +97,7 @@ v_init = np.zeros(robot.model.nv)
 sim = SimulatorPybullet(URDF_NAME, DT, q_init, 12, robot, controlled_joint_names, contact_frame_names, gravity=[0, 0.0, -9.81])
 
 print('sim.robotId: ', sim.robotId)
-fm = ForceMonitor(sim.robotId, 0, sim.pyb_endeff_ids)
+fm = ForceMonitor(sim.robotId, 0, sim.pyb_ct_frame_ids)
 
 # Center the camera on the current position of the robot
 pyb.resetDebugVisualizerCamera(cameraDistance=0.8, cameraYaw=-50, cameraPitch=-39.9,
