@@ -53,10 +53,10 @@ i_p_ib = i_T_b.translation
 
 
 # measurements to be used in KF update
-MEASUREMENTS = (0,0,0)  # nothing happens
+# MEASUREMENTS = (0,0,0)  # nothing happens
 # MEASUREMENTS = (1,0,0)  # only kin
 # MEASUREMENTS = (0,1,0)  # only diff kin
-# MEASUREMENTS = (1,1,0)  # all kinematics
+MEASUREMENTS = (1,1,0)  # all kinematics
 # MEASUREMENTS = (1,1,1)  # all kinematics + foot height
 
 ##############################################
@@ -91,9 +91,12 @@ DATA_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/'
 # data_file = 'Logs_09_10_20_soir/data_2020_10_09_19_05.npz'
 # data_file = 'Logs_09_10_20_soir/data_2020_10_09_19_06.npz'
 
+# data_2020_10_15_14_34: not moving
+# data_2020_10_15_14_36: XYZsinusoid
+# data_2020_10_15_14_38: stamping
 # data_file = "Logs_15_10_2020/data_2020_10_15_14_34.npz"
 # data_file = "Logs_15_10_2020/data_2020_10_15_14_36.npz"
-data_file = "Logs_15_10_2020/data_2020_10_15_14_38.npz"
+# data_file = "Logs_15_10_2020/data_2020_10_15_14_38.npz"
 
 print('Reading ', DATA_FOLDER+data_file)
 arr_dic = read_data_file_laas(DATA_FOLDER+data_file, dt)
@@ -184,7 +187,6 @@ for i in range(N):
     b_v_ob = np.zeros(3) 
     o_a_ob = o_a_oi + o_R_i@np.cross(i_omg_oi, np.cross(i_omg_oi, i_p_ib))     # acceleration composition (neglecting i_domgdt_oi x i_p_ib)
     o_forces = cforces_est.compute_contact_forces(qa, dqa, o_R_b, b_v_ob, b_omg_ob, o_a_ob, tau)
-    # o_forces = cforces_est.compute_contact_forces(qa, dqa, o_R_b, b_v_ob, b_omg_ob, tau)
     f_sum_arr[i,:] = sum(o_forces)
     fz_arr[i,:] = o_forces[:,2]
     # print('fz: ', fz_lst)

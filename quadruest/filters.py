@@ -83,19 +83,21 @@ class ImuLegKF:
         # Geometry update
         #################
         # for each foot (in contact or not) update position using kinematics
-        # Adapt cov if in conact or not
+        # Adapt cov if in contact or not
         if measurements[0]:
             for cid in self.cids_idx:
                 b_p_bl = self.robot.framePlacement(q_static, cid, update_kinematics=False).translation
                 i_p_il =  self.i_T_b * b_p_bl 
                 o_p_il = o_R_i @ i_p_il
                 R_relp = self.relp_cov(q_static, o_R_i, cid)
+                if feets_in_contact[i]:
+                    R_relp *= 10  # crank up covariance: foot rel position less reliable when in air (really?)
                 self.kalman_update(o_p_il, self.H_relp_dic[cid], R_relp)
 
         ################################
         # differential kinematics update
         ################################
-        # For feet in contact only, use the zero velocity assumption
+        # For feet in contact only, use the zero velocity assumption to derive base velocity measures
         if measurements[1]:
             for i, cid in enumerate(self.contact_ids):
                 if feets_in_contact[i]:
