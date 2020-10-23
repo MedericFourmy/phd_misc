@@ -58,7 +58,7 @@ def forces_from_torques_full(model, data, q, v, dv, tauj, Jlinvel):
         
 DT = 0.001
 SLEEP = False
-GUION = False
+GUION = True
 NOFEET = True
 SAVE_CS = True
 
@@ -109,10 +109,11 @@ contact_frame_ids = [model.getFrameId(ct_frame) for ct_frame in contact_frame_na
 # From ContactSequence file
 cs_file_dir = '/home/mfourmy/Documents/Phd_LAAS/data/trajs/'
 # cs_file_name = 'solo_nomove.cs'
-cs_file_name = 'solo_sin_y_notrunk.cs'
+# cs_file_name = 'solo_sin_y_notrunk.cs'
 # cs_file_name = 'solo_sin_y_trunk.cs'
 # cs_file_name = 'solo_sin_traj.cs'
 # cs_file_name = 'solo_sin_rp+y.cs'
+cs_file_name = 'solo_stamping.cs'
 # cs_file_name = 'solo_stamping_nofeet.cs'
 cs_file_path = cs_file_dir + cs_file_name
 cs_file_pyb_name = cs_file_name.split('.')[0] + '_Pyb'

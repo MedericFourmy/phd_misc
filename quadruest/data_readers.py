@@ -129,8 +129,8 @@ def read_data_file_laas(file_path, dt):
     # !!!!! Mocap orientation needs to be inverted !!!!!!
     # quat  -> conjugate
     # R mat -> transpose
-    arr_dic['w_q_m'][:,:3] = -arr_dic['w_q_m'][:,:3]  # qx, qy, qz, qw -> -qx, -qy, -qz, qw
-    arr_dic['w_R_m'] = np.array([w_R_m.T for w_R_m in arr_dic['w_R_m']])
+    # arr_dic['w_q_m'][:,:3] = -arr_dic['w_q_m'][:,:3]  # qx, qy, qz, qw -> -qx, -qy, -qz, qw
+    # arr_dic['w_R_m'] = np.array([w_R_m.T for w_R_m in arr_dic['w_R_m']])
 
     # other preprocessing (to unify formats)
     arr_dic['w_pose_wm'] = np.hstack([arr_dic['w_p_wm'], arr_dic['w_q_m']])

@@ -7,27 +7,38 @@ eigenpy.switchToNumpyArray()
 
 
 class ContactForcesEstimator:
-    def __init__(self, robot, contact_frame_id_lst): 
+    def __init__(self, robot, contact_frame_id_lst, dt): 
         self.robot = robot
         self.nv = self.robot.model.nv 
         self.contact_frame_id_lst = contact_frame_id_lst
+        self.dt = dt
+        self.b_omg_ob_prev = np.zeros(3)
+        self.dqa_prev = np.zeros(12)
 
-    def compute_contact_forces(self, qa, dqa, oRb, b_vb, b_wb, o_acc, tauj):
+    def compute_contact_forces(self, qa, dqa, o_R_b, b_v_ob, b_omg_ob, o_a_ob, tauj):
         """ 
         Compute the 3D contact/reaction forces at the solo feet using inverse dynamics.
         Forces are expressed in body frame.
         """
-        o_quat_b = pin.Quaternion(oRb).coeffs()
+        b_v_ob = np.zeros(3)
+        o_quat_b = pin.Quaternion(o_R_b).coeffs()
         q  = np.concatenate([np.array([0,0,0]), o_quat_b, qa])  # robot anywhere with orientation estimated from IMU
-        vq = np.concatenate([b_vb, b_wb, dqa])                 # generalized velocity in base frame as pin requires
-        # vq = np.hstack([np.zeros(3), b_wb, dqa])           # generalized velocity in base frame as pin requires
-        dvq = np.zeros(self.nv)
-        dvq[:3] = oRb.T @ o_acc - np.cross(b_wb, b_vb) # spatial acceleration linear part, neglecting the rest
+        vq = np.concatenate([b_v_ob, b_omg_ob, dqa])                 # generalized velocity in base frame as pin requires
+        # vq = np.hstack([np.zeros(3), b_omg_ob, dqa])           # generalized velocity in base frame as pin requires
+        b_spa = o_R_b.T @ o_a_ob - np.cross(b_omg_ob, b_v_ob) # spatial acceleration linear part, neglecting the rest
+        ddqa = (dqa - self.dqa_prev)/self.dt   # using ddqa numdiff only seems to yield the best results
+        # ddqa = np.zeros(12)
+        # b_domgdt_ob = (b_omg_ob - self.b_omg_ob_prev)/self.dt
+        b_domgdt_ob = np.zeros(3)
+        dvq = np.concatenate([b_spa, b_domgdt_ob, ddqa])
 
         taucf = pin.rnea(self.robot.model, self.robot.data, q, vq, dvq) # sum of joint torque + contact torques corresponding to the actuated equations
         taucf[6:] = taucf[6:] - tauj
 
-        return taucf_to_oforces(self.robot, q, self.nv, oRb, taucf, self.contact_frame_id_lst)
+        self.dqa_prev = dqa
+        self.b_omg_ob_prev = b_omg_ob
+
+        return taucf_to_oforces(self.robot, q, self.nv, o_R_b, taucf, self.contact_frame_id_lst)
 
 
 class ContactForceEstimatorGeneralizedMomentum:
@@ -45,11 +56,11 @@ class ContactForceEstimatorGeneralizedMomentum:
         self.p0 = np.zeros(self.nv)  # not necessary -> to compute
         self.int = np.zeros(self.nv)
 
-    def compute_contact_forces(self, qa, dqa, oRb, b_vb, b_wb, o_acc, tauj):
-        o_quat_b = pin.Quaternion(oRb).coeffs()
+    def compute_contact_forces(self, qa, dqa, o_R_b, b_v_ob, b_omg_ob, _, tauj):
+        o_quat_b = pin.Quaternion(o_R_b).coeffs()
         q =  np.concatenate([np.array([0,0,0]), o_quat_b, qa])  # robot anywhere with orientation estimated from IMU
-        vq = np.concatenate([b_vb, b_wb, dqa])                 # generalized velocity in base frame as pin requires
-        # vq = np.hstack([np.zeros(3), b_wb, dqa])           # generalized velocity in base frame as pin requires
+        vq = np.concatenate([b_v_ob, b_omg_ob, dqa])
+        # vq = np.hstack([np.zeros(3), b_omg_ob, dqa])
         C = pin.computeCoriolisMatrix(self.rm, self.rd, q, vq)
         g = pin.computeGeneralizedGravity(self.rm, self.rd, q)
         M = pin.crba(self.rm, self.rd, q)
@@ -58,10 +69,10 @@ class ContactForceEstimatorGeneralizedMomentum:
         self.int = self.int + (tauj + C.T @ vq - g + self.r)*self.dt
         self.r = self.Ki * (p - self.int - self.p0)
 
-        return taucf_to_oforces(self.robot, q, self.nv, oRb, self.r, self.contact_frame_id_lst)
+        return taucf_to_oforces(self.robot, q, self.nv, o_R_b, self.r, self.contact_frame_id_lst)
 
 
-def taucf_to_oforces(robot, q, nv, oRb, taucf, contact_frame_id_lst):
+def taucf_to_oforces(robot, q, nv, o_R_b, taucf, contact_frame_id_lst):
     Jlinvel = compute_joint_jac(robot, q, contact_frame_id_lst)
 
     # 3 options, same outcomes IF the indices are in the right order for the 3rd:

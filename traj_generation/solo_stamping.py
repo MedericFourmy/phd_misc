@@ -16,6 +16,7 @@ TRAJ_NAME = 'solo_stamping'
 
 dt = conf.dt
 
+# tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
 tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
 logger = TrajLogger(tsid_solo.contact_frame_names, directory='/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
 # logger = TrajLogger(tsid_solo.contact_frame_names, directory='temp_traj')
@@ -128,7 +129,8 @@ while not end_traj:
                 #
                 # print(dist_to_goal-dist_min_w_prev_ramp, ' / ', dist_min_w_prev_ramp)
                 x_prev = logistic.cdf(dist_to_goal-dist_min_w_prev_ramp, (dist_shift-dist_min_w_prev_ramp)/2, (dist_shift-dist_min_w_prev_ramp)/18)
-                w_prev = linear_interp(x_prev, 1, 0, w_forceRef_big_newcontact, conf.w_forceRef)
+                # w_prev = linear_interp(x_prev, 1, 0, w_forceRef_big_newcontact, conf.w_forceRef)
+                w_prev = conf.w_forceRef
                 tsid_solo.contacts[prev_raised_foot_nb].setRegularizationTaskWeightVector(w_prev*np.ones(3))
 
             # lower le weight of the next foot to raise
@@ -137,7 +139,8 @@ while not end_traj:
                 # w_next = linear_interp(dist_to_goal, dist_max_w_next_ramp, 0, conf.w_forceRef, w_forceRef_big)
                 #
                 x_next = logistic.cdf(dist_max_w_next_ramp-dist_to_goal, dist_max_w_next_ramp/2, dist_max_w_next_ramp/18)
-                w_next = linear_interp(x_next, 1, 0, w_forceRef_big, conf.w_forceRef)
+                # w_next = linear_interp(x_next, 1, 0, w_forceRef_big, conf.w_forceRef)
+                w_next = conf.w_forceRef
                 tsid_solo.contacts[raised_foot_nb].setRegularizationTaskWeightVector(w_next*np.ones(3))
 
             t_shift += dt
@@ -212,7 +215,7 @@ while not end_traj:
 
 
 logger.store_csv_trajs(TRAJ_NAME, sep=' ', skip_free_flyer=True)
-# logger.store_mcapi_traj(TRAJ_NAME)
+logger.store_mcapi_traj(TRAJ_NAME)
 
 import matplotlib.pyplot as plt
 
@@ -333,7 +336,7 @@ w_next_arr = np.array(w_next_arr)
 x_prev_arr = np.array(x_prev_arr)
 x_next_arr = np.array(x_next_arr)
 
-plt.figure()
+plt.figure('Feet weights and noral forces')
 plt.subplot(2,1,1)
 plt.plot(logger.data_log['t'], w_prev_arr, label='w_prev')
 plt.plot(logger.data_log['t'], w_next_arr, label='w_next')
