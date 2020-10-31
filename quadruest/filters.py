@@ -85,12 +85,12 @@ class ImuLegKF:
         # for each foot (in contact or not) update position using kinematics
         # Adapt cov if in contact or not
         if measurements[0]:
-            for cid in self.cids_idx:
+            for i_ee, cid in enumerate(self.cids_idx):
                 b_p_bl = self.robot.framePlacement(q_static, cid, update_kinematics=False).translation
                 i_p_il =  self.i_T_b * b_p_bl 
                 o_p_il = o_R_i @ i_p_il
                 R_relp = self.relp_cov(q_static, o_R_i, cid)
-                if feets_in_contact[i]:
+                if feets_in_contact[i_ee]:
                     R_relp *= 10  # crank up covariance: foot rel position less reliable when in air (really?)
                 self.kalman_update(o_p_il, self.H_relp_dic[cid], R_relp)
 
@@ -99,8 +99,8 @@ class ImuLegKF:
         ################################
         # For feet in contact only, use the zero velocity assumption to derive base velocity measures
         if measurements[1]:
-            for i, cid in enumerate(self.contact_ids):
-                if feets_in_contact[i]:
+            for i_ee, cid in enumerate(self.contact_ids):
+                if feets_in_contact[i_ee]:
                     # measurement: velocity in world frame
                     o_v_ob = base_vel_from_stable_contact(self.robot, q_static, dq_static, i_omg_oi, o_R_i, cid)
                     o_v_oi = o_v_ob + o_R_i @ np.cross(i_omg_oi, self.i_R_b@self.b_p_bi)  # velocity composition law
@@ -113,8 +113,8 @@ class ImuLegKF:
         # # foot in contact zero height update
         # ####################################
         if measurements[2]:
-            for i, cid in enumerate(self.contact_ids):
-                if feets_in_contact[i]:        
+            for i_ee, cid in enumerate(self.contact_ids):
+                if feets_in_contact[i_ee]:        
                     # zero height update
                     hfoot = 0.0
                     H = np.zeros(6*3)

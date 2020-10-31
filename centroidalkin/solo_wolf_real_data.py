@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import os
+import sys
 import time
 import numpy as np
 import pandas as pd
@@ -18,7 +19,7 @@ struct = 'POV'
 EST = True
 FBK = False
 KF = False
-PLOT_SHOW = True
+PLOT_SHOW = '--show' in sys.argv
 SAVE_FIGURES = True
 
 
@@ -115,30 +116,30 @@ if KF:  plt.plot(df_kfs['t'], df_kfs['oz'], 'bx',  label='oz_kf')
 plt.legend()
 if SAVE_FIGURES: fig.savefig(PATH+'base_angleaxis.png')
 
-# Base orientation
-fig = plt.figure('Base orientation Quaternion World frame')
-plt.title('Base orientation XYZ')
-plt.subplot(4,1,1)
-if EST: plt.plot(df_est['t'], df_est['qx'], 'r--', label='qx_est')
-if FBK: plt.plot(df_est['t'], df_fbk['qx'], 'r:', label='qx_fbk')
-if KF:  plt.plot(df_kfs['t'], df_kfs['qx'], 'rx',  label='qx_kf')
-plt.legend()
-plt.subplot(4,1,2)
-if EST: plt.plot(df_est['t'], df_est['qy'], 'g--', label='qy_est')
-if FBK: plt.plot(df_est['t'], df_fbk['qy'], 'g:', label='qy_fbk')
-if KF:  plt.plot(df_kfs['t'], df_kfs['qy'], 'gx',  label='qy_kf')
-plt.legend()
-plt.subplot(4,1,3)
-if EST: plt.plot(df_est['t'], df_est['qz'], 'b--', label='qz_est')
-if FBK: plt.plot(df_est['t'], df_fbk['qz'], 'b:', label='qz_fbk')
-if KF:  plt.plot(df_kfs['t'], df_kfs['qz'], 'bx',  label='qz_kf')
-plt.legend()
-plt.subplot(4,1,4)
-if EST: plt.plot(df_est['t'], df_est['qw'], 'k--', label='qw_est')
-if FBK: plt.plot(df_est['t'], df_fbk['qw'], 'k:', label='qw_fbk')
-if KF:  plt.plot(df_kfs['t'], df_kfs['qw'], 'kx',  label='qw_kf')
-plt.legend()
-if SAVE_FIGURES: fig.savefig(PATH+'base_angleaxis.png')
+# # Base orientation
+# fig = plt.figure('Base orientation Quaternion World frame')
+# plt.title('Base orientation XYZ')
+# plt.subplot(4,1,1)
+# if EST: plt.plot(df_est['t'], df_est['qx'], 'r--', label='qx_est')
+# if FBK: plt.plot(df_est['t'], df_fbk['qx'], 'r:', label='qx_fbk')
+# if KF:  plt.plot(df_kfs['t'], df_kfs['qx'], 'rx',  label='qx_kf')
+# plt.legend()
+# plt.subplot(4,1,2)
+# if EST: plt.plot(df_est['t'], df_est['qy'], 'g--', label='qy_est')
+# if FBK: plt.plot(df_est['t'], df_fbk['qy'], 'g:', label='qy_fbk')
+# if KF:  plt.plot(df_kfs['t'], df_kfs['qy'], 'gx',  label='qy_kf')
+# plt.legend()
+# plt.subplot(4,1,3)
+# if EST: plt.plot(df_est['t'], df_est['qz'], 'b--', label='qz_est')
+# if FBK: plt.plot(df_est['t'], df_fbk['qz'], 'b:', label='qz_fbk')
+# if KF:  plt.plot(df_kfs['t'], df_kfs['qz'], 'bx',  label='qz_kf')
+# plt.legend()
+# plt.subplot(4,1,4)
+# if EST: plt.plot(df_est['t'], df_est['qw'], 'k--', label='qw_est')
+# if FBK: plt.plot(df_est['t'], df_fbk['qw'], 'k:', label='qw_fbk')
+# if KF:  plt.plot(df_kfs['t'], df_kfs['qw'], 'kx',  label='qw_kf')
+# plt.legend()
+# if SAVE_FIGURES: fig.savefig(PATH+'base_angleaxis.png')
 
 
 # Base velocity
@@ -238,6 +239,17 @@ if struct == 'POVCDL':
     if SAVE_FIGURES: fig.savefig(PATH+'AM.png')
 
 
+    # Estimated bias
+    fig = plt.figure('COM bias')
+    plt.plot(df_kfs['t'], df_kfs['bpx'], 'rx', label='bpx')
+    plt.plot(df_kfs['t'], df_kfs['bpy'], 'gx', label='bpy')
+    plt.plot(df_kfs['t'], df_kfs['bpz'], 'bx', label='bpz')
+    plt.legend()
+    if SAVE_FIGURES: fig.savefig(PATH+'com_bias_est.png')
+
+
+    print('Delta cdz')
+    print(df_est['cdz'].iloc[-1] - df_est['cdz'].iloc[0])
 
 
 if SAVE_FIGURES:

@@ -1,10 +1,11 @@
+from scipy import signal
 import numpy as np
 from data_readers import read_data_file_laas, read_data_files_mpi, shortened_arr_dic
 
 # DATA_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_09_10_20_soir/'
 DATA_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_15_10_2020/'
 IN_FILE_NAME = 'data_2020_10_15_14_34.npz'
-OUT_FILE_NAME = 'data_2020_10_15_14_34_format_shortened_CST_Ogyr.npz'
+OUT_FILE_NAME = 'data_2020_10_15_14_34_format_shortened_CSTqa.npz'
 
 dt = 1e-3  # discretization timespan
 # Load LAAS solo8 data file
@@ -14,11 +15,15 @@ N = len(arr_dic['t'])
 arr_dic = shortened_arr_dic(arr_dic, 2000, N=N-200)
 # arr_dic = shortened_arr_dic(arr_dic, 5000, 7150)
 
-arr_dic['imu_acc'][:,:] = [-1.38603431e-03, -7.49042047e-04,  9.79471817e+00]
-# arr_dic['i_omg_oi'][:,:] = [ 7.94876453e-06,  4.37204760e-03, -2.82067587e-04]
+# arr_dic['imu_acc'][:,:] = np.mean(arr_dic['imu_acc'], axis=0)
+# arr_dic['i_omg_oi'][:,:] = np.mean(arr_dic['i_omg_oi'], axis=0)
 
-# arr_dic['imu_acc'][:,:] = [-1.38603431e-03, -7.49042047e-04,  9.79471817e+00]
-arr_dic['i_omg_oi'][:,:] = [0,0,0]
+# arr_dic['imu_acc'][:,:] = [0,0,9.806]
+# arr_dic['i_omg_oi'][:,:] = [0,0,0]
+# dqa_filt_arr = signal.savgol_filter(arr_dic['qa'], window_length=21, polyorder=2, deriv=1, delta=dt, mode='mirror', axis=0)
+# arr_dic['dqa'][:,:] = dqa_filt_arr
+
+arr_dic['qa'][:,:] = np.mean(arr_dic['qa'], axis=0)
 
 # Load MPI solo12 data files
 # folder = "data/solo12_standing_still_2020-10-01_14-22-52/2020-10-01_14-22-52/"

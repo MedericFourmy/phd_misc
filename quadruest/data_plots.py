@@ -26,8 +26,8 @@ data_file = "Logs_15_10_2020/data_2020_10_15_14_34.npz"
 
 
 arr_dic = read_data_file_laas(BASE_FOLDER+data_file, dt)
-# arr_dic = shortened_arr_dic(arr_dic, 2000, len(arr_dic['t'])-200)
-arr_dic = shortened_arr_dic(arr_dic, 5000, 7150)
+arr_dic = shortened_arr_dic(arr_dic, 2000, len(arr_dic['t'])-200)
+# arr_dic = shortened_arr_dic(arr_dic, 5000, 7150)
 
 t_arr = arr_dic['t']
 
@@ -49,10 +49,12 @@ o_R_i_wolf = o_q_i_wolf.toRotationMatrix()
 imu_acc_rot = (o_R_i_wolf@arr_dic['imu_acc'].T).T
 print('imu_acc_rot mean/cov')
 print(np.mean(imu_acc_rot, axis=0))
-print(np.cov(imu_acc_rot, rowvar=False))
+print('ACC std')
+print(np.sqrt(np.cov(imu_acc_rot, rowvar=False)))
 print('i_omg_oi mean/cov')
 print(np.mean(arr_dic['i_omg_oi'], axis=0))
-print(np.cov(arr_dic['i_omg_oi'], rowvar=False))
+print('GYR std')
+print(np.sqrt(np.cov(arr_dic['i_omg_oi'], rowvar=False)))
 
 imu_acc_norm = np.linalg.norm(arr_dic['imu_acc'], axis=1)
 cov_imu_acc = np.cov(arr_dic['imu_acc'], rowvar=False)

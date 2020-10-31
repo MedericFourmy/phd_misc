@@ -15,7 +15,7 @@ class ContactForcesEstimator:
         self.b_omg_ob_prev = np.zeros(3)
         self.dqa_prev = np.zeros(12)
 
-    def compute_contact_forces(self, qa, dqa, o_R_b, b_v_ob, b_omg_ob, o_a_ob, tauj):
+    def compute_contact_forces(self, qa, dqa, o_R_b, b_v_ob, b_omg_ob, o_a_ob, tauj, world_frame=True):
         """ 
         Compute the 3D contact/reaction forces at the solo feet using inverse dynamics.
         Forces are expressed in body frame.
@@ -38,7 +38,29 @@ class ContactForcesEstimator:
         self.dqa_prev = dqa
         self.b_omg_ob_prev = b_omg_ob
 
-        return taucf_to_oforces(self.robot, q, self.nv, o_R_b, taucf, self.contact_frame_id_lst)
+        return taucf_to_oforces(self.robot, q, self.nv, o_R_b, taucf, self.contact_frame_id_lst, world_frame=world_frame)
+
+
+    def compute_contact_forces2(self, qa, dqa, ddqa, o_R_i, i_omg_oi, i_domg_oi, o_a_oi, tauj, world_frame=True):
+        """ 
+        Compute the 3D contact/reaction forces at the solo feet using inverse dynamics.
+        Forces are expressed in body frame.
+        """
+        zero3 = np.array([0,0,0])
+        o_quat_i = pin.Quaternion(o_R_i).coeffs()
+        q  = np.concatenate([zero3, o_quat_i, qa])   # robot anywhere with orientation estimated from IMU
+        vq = np.concatenate([zero3, i_omg_oi, dqa])             # generalized velocity in base frame as pin requires
+        i_a_oi = o_R_i.T @ o_a_oi # - np.cross(b_omg_ob, b_v_ob) # since the i_v_oi is set to zero arbitrarily
+        dvq = np.concatenate([i_a_oi, i_domg_oi, ddqa])
+
+        taucf = pin.rnea(self.robot.model, self.robot.data, q, vq, dvq) # sum of joint torque + contact torques corresponding to the actuated equations
+        taucf[6:] = taucf[6:] - tauj
+
+        self.dqa_prev = dqa
+        self.i_omg_oi_prev = i_omg_oi
+
+        return taucf_to_oforces(self.robot, q, self.nv, o_R_i, taucf, self.contact_frame_id_lst, world_frame=world_frame)
+
 
 
 class ContactForceEstimatorGeneralizedMomentum:
@@ -56,7 +78,7 @@ class ContactForceEstimatorGeneralizedMomentum:
         self.p0 = np.zeros(self.nv)  # not necessary -> to compute
         self.int = np.zeros(self.nv)
 
-    def compute_contact_forces(self, qa, dqa, o_R_b, b_v_ob, b_omg_ob, _, tauj):
+    def compute_contact_forces(self, qa, dqa, o_R_b, b_v_ob, b_omg_ob, _, tauj, world_frame=True):
         o_quat_b = pin.Quaternion(o_R_b).coeffs()
         q =  np.concatenate([np.array([0,0,0]), o_quat_b, qa])  # robot anywhere with orientation estimated from IMU
         vq = np.concatenate([b_v_ob, b_omg_ob, dqa])
@@ -72,8 +94,8 @@ class ContactForceEstimatorGeneralizedMomentum:
         return taucf_to_oforces(self.robot, q, self.nv, o_R_b, self.r, self.contact_frame_id_lst)
 
 
-def taucf_to_oforces(robot, q, nv, o_R_b, taucf, contact_frame_id_lst):
-    Jlinvel = compute_joint_jac(robot, q, contact_frame_id_lst)
+def taucf_to_oforces(robot, q, nv, o_R_b, taucf, contact_frame_id_lst, world_frame=True):
+    Jlinvel = compute_joint_jac(robot, q, contact_frame_id_lst, world_frame=world_frame)
 
     # 3 options, same outcomes IF the indices are in the right order for the 3rd:
     # 1) solve the whole system:
@@ -105,7 +127,7 @@ def compute_joint_jac(robot, q, cf_ids, world_frame=True):
     Jlinvel = np.zeros((len(cf_ids)*3, robot.nv))
     for i, frame_id in enumerate(cf_ids):
         if world_frame:
-            oTl = robot.framePlacement(q, frame_id, update_kinematics=False)
+            oTl = robot.framePlacement(q, frame_id, update_kinematics=True)
             Jlinvel[3*i:3*(i+1),:] = oTl.rotation @ robot.computeFrameJacobian(q, frame_id)[:3,:]  # jac in world coord
         else: 
             Jlinvel[3*i:3*(i+1),:] = robot.computeFrameJacobian(q, frame_id)[:3,:]  # jac in local coord

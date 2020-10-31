@@ -14,7 +14,7 @@ from filters import ImuLegKF, ImuLegCF
 from data_readers import read_data_files_mpi, read_data_file_laas, shortened_arr_dic
 
 SOLO12 = True
-THRESH_FZ = 5  # minimum force to consider stable contact from estimated normal force (N)
+THRESH_FZ = 3  # minimum force to consider stable contact from estimated normal force (N)
 
 if SOLO12:
     URDF_NAME = 'solo12.urdf'
@@ -95,12 +95,18 @@ DATA_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/'
 # data_2020_10_15_14_36: XYZsinusoid
 # data_2020_10_15_14_38: stamping
 # data_file = "Logs_15_10_2020/data_2020_10_15_14_34.npz"
-# data_file = "Logs_15_10_2020/data_2020_10_15_14_36.npz"
+data_file = "Logs_15_10_2020/data_2020_10_15_14_36.npz"
 # data_file = "Logs_15_10_2020/data_2020_10_15_14_38.npz"
+
+# data_file = "Log_15_10_2020_part2/data_2020_10_15_18_21.npz"
+# data_file = "Log_15_10_2020_part2/data_2020_10_15_18_23.npz"
+# data_file = "Log_15_10_2020_part2/data_2020_10_15_18_24.npz"
+
 
 print('Reading ', DATA_FOLDER+data_file)
 arr_dic = read_data_file_laas(DATA_FOLDER+data_file, dt)
 # arr_dic = shortened_arr_dic(arr_dic, 2000, len(arr_dic['t'])-500)
+# arr_dic = shortened_arr_dic(arr_dic, 0, 2000)
 
 t_arr = arr_dic['t']
 N = len(t_arr)
@@ -167,8 +173,14 @@ o_p_ob_kf_arr = np.zeros((N,3))
 o_v_ob_kf_arr = np.zeros((N,3))
 o_p_ob_cf_arr = np.zeros((N,3))
 o_v_ob_cf_arr = np.zeros((N,3))
+# centroidal quantities
+o_p_oc_arr = np.zeros((N,3))
+o_v_oc_arr = np.zeros((N,3))
+o_Lc_arr = np.zeros((N,3))
+
 
 delays = np.zeros(N)
+o_forces_arr = np.zeros((N,12))
 for i in range(N):
     # define measurements
     o_R_i = arr_dic['o_R_i'][i,:]  # retrieve IMU pose estimation
@@ -186,8 +198,10 @@ for i in range(N):
     # b_v_ob = o_R_b.T @ o_v_oi + np.cross(b_omg_ob, b_p_bi) 
     b_v_ob = np.zeros(3) 
     o_a_ob = o_a_oi + o_R_i@np.cross(i_omg_oi, np.cross(i_omg_oi, i_p_ib))     # acceleration composition (neglecting i_domgdt_oi x i_p_ib)
-    o_forces = cforces_est.compute_contact_forces(qa, dqa, o_R_b, b_v_ob, b_omg_ob, o_a_ob, tau)
-    f_sum_arr[i,:] = sum(o_forces)
+    # o_forces = cforces_est.compute_contact_forces(qa, dqa, o_R_b, b_v_ob, b_omg_ob, o_a_ob, tau)
+    o_forces = cforces_est.compute_contact_forces2(qa, dqa, np.zeros(3), o_R_i, i_omg_oi, np.zeros(3), o_a_oi, tau, world_frame=True)
+    o_forces_arr[i,:] = o_forces.flatten()
+    f_sum_arr[i,:] = np.sum(o_forces, axis=0)
     fz_arr[i,:] = o_forces[:,2]
     # print('fz: ', fz_lst)
     feets_in_contact = [fz > THRESH_FZ for fz in o_forces[:,2]]  # simple contact detection
@@ -211,28 +225,49 @@ for i in range(N):
     i_v_oi_kf_arr[i,:] = o_R_i.T @ x_arr_kf[i,3:6] 
     i_v_oi_cf_arr[i,:] = o_R_i.T @ x_arr_cf[i,3:6] 
 
-    o_R_b_arr[i,:] = o_R_i @ i_R_b
+    o_R_b = o_R_i @ i_R_b
+    o_R_b_arr[i,:] = o_R_b
     o_q_b_arr[i,:] = pin.Quaternion(o_R_b_arr[i,:]).coeffs()
-    o_p_ob_kf_arr[i,:] = x_arr_kf[i,0:3] + o_R_b_arr[i,:] @ b_p_bi
-    o_v_ob_kf_arr[i,:] = x_arr_kf[i,3:6] + o_R_b_arr[i,:] @ np.cross(i_omg_oi, b_p_bi)
-    o_p_ob_cf_arr[i,:] = x_arr_cf[i,0:3] + o_R_b_arr[i,:] @ b_p_bi
-    o_v_ob_cf_arr[i,:] = x_arr_cf[i,3:6] + o_R_b_arr[i,:] @ np.cross(i_omg_oi, b_p_bi)
+    o_p_ob_kf_arr[i,:] = x_arr_kf[i,0:3] + o_R_i @ i_p_ib
+    o_v_ob_kf_arr[i,:] = x_arr_kf[i,3:6] + o_R_i @ np.cross(i_omg_oi, i_p_ib)
+    o_p_ob_cf_arr[i,:] = x_arr_cf[i,0:3] + o_R_i @ i_p_ib
+    o_v_ob_cf_arr[i,:] = x_arr_cf[i,3:6] + o_R_i @ np.cross(i_omg_oi, i_p_ib)
+    # o_p_ob_kf_arr[i,:] = x_arr_kf[i,0:3] + o_R_b @ b_p_bi
+    # o_v_ob_kf_arr[i,:] = x_arr_kf[i,3:6] + o_R_b @ np.cross(i_omg_oi, b_p_bi)
+    # o_p_ob_cf_arr[i,:] = x_arr_cf[i,0:3] + o_R_b @ b_p_bi
+    # o_v_ob_cf_arr[i,:] = x_arr_cf[i,3:6] + o_R_b @ np.cross(i_omg_oi, b_p_bi)
     # if (i % 100 ) == 0:
     #     print(i)
+
+    # Use base estimates from KF to compute CDL
+    q = np.hstack([o_p_ob_kf_arr[i,:], o_q_b_arr[i,:], qa])
+    dq = np.hstack([o_v_ob_kf_arr[i,:], i_omg_oi, dqa])
+
+    o_p_oc_arr[i,:], o_v_oc_arr[i,:] = robot.com(q, dq)
+    o_Lc_arr[i,:] = np.zeros(3)
+    # robot.centroidalMomentum(q,dq).angular()
+
+
 
 
 # data to copy
 res_arr_dic = {}
-copy_lst = ['t', 'w_v_wm', 'm_v_wm', 'w_q_m', 'o_R_i', 'w_p_wm', 'i_omg_oi']
+copy_lst = ['t', 'w_v_wm', 'm_v_wm', 'w_q_m', 'o_R_i', 'o_q_i', 'w_p_wm', 'i_omg_oi']
 for k in copy_lst:
     res_arr_dic[k] = arr_dic[k]
 # add estimated data
+res_arr_dic['o_p_ob'] = o_p_ob_kf_arr
 res_arr_dic['o_R_b'] =     o_R_b_arr
 res_arr_dic['o_q_b'] =     o_q_b_arr
-res_arr_dic['o_p_ob'] = o_p_ob_kf_arr
 res_arr_dic['o_v_ob'] = o_v_ob_kf_arr
 res_arr_dic['o_p_ob_cf'] = o_p_ob_cf_arr
 res_arr_dic['o_v_ob_cf'] = o_v_ob_cf_arr
+
+res_arr_dic['o_p_oc'] = o_p_oc_arr
+res_arr_dic['o_v_oc'] = o_v_oc_arr
+res_arr_dic['o_Lc'] =   o_Lc_arr
+
+
 
 
 # out_path = DATA_FOLDER_RESULTS+data_file
@@ -261,6 +296,14 @@ plt.plot(t_arr, f_sum_arr[:,2], 'b', label='f sum z')
 plt.hlines(0, t_arr[0]-1, t_arr[-1]+1, 'k')
 plt.hlines(-m*g.linear[2], t_arr[0]-1, t_arr[-1]+1, 'k')
 plt.legend()
+
+plt.figure('o forces for each leg')
+for k in range(4):
+    plt.subplot(4,1,k+1)
+    plt.plot(t_arr, o_forces_arr[:,3*k+0], 'r', markersize=1)
+    plt.plot(t_arr, o_forces_arr[:,3*k+1], 'g', markersize=1)
+    plt.plot(t_arr, o_forces_arr[:,3*k+2], 'b', markersize=1)
+
 
 plt.figure('IMU acc in world frame')
 plt.plot(t_arr, arr_dic['o_a_oi'][:,0], 'r', label='f sum x')
