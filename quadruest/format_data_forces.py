@@ -7,9 +7,9 @@ from contact_forces_estimator import ContactForcesEstimator
 from example_robot_data import loadSolo
 
 DATA_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/'
-# IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_34.npz'
-IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_36.npz'
-# IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_38.npz'
+# IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_34.npz'  # standing still
+IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_36.npz'    # sinXYZ
+# IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_38.npz'  # stamping
 
 # data_2020_10_15_18_21: ...
 # data_2020_10_15_18_23: walk
@@ -20,19 +20,27 @@ IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_36.npz'
 
 # data_2020_10_29_18_03 walk 0.32 s, no mocap 
 # IN_FILE_NAME = 'data_2020_10_29_18_03.npz'
+# IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_38.npz'
 
-THRESH_VIZ = 7
+# walking and stoping data
+# IN_FILE_NAME = 'Logs_05_10_2020_18h/data_2020_11_05_18_18.npz'  # standing still+walk 0.48 FAIL
+IN_FILE_NAME = 'Logs_05_10_2020_18h/data_2020_11_05_18_20.npz'  # standing still+walk 0.48
 
+THRESH_VIZ = 8
 
-OUT_FILE_NAME = 'data_2020_10_15_14_36_format_forces.npz'
+SAVE = True
+OUT_FILE_NAME = 'Logs_05_10_2020_18h/data_2020_11_05_18_20_format_forces.npz'
+
 
 dt = 1e-3  # discretization timespan
 arr_dic = read_data_file_laas(DATA_FOLDER+IN_FILE_NAME, dt)
 N = len(arr_dic['t'])
-arr_dic = shortened_arr_dic(arr_dic, 0, N=N-200)
+# arr_dic = shortened_arr_dic(arr_dic, 0, N=N-200)
 # arr_dic = shortened_arr_dic(arr_dic, 0, 2000)
+# arr_dic = shortened_arr_dic(arr_dic, 2000, -200)
 t_arr = arr_dic['t']
 N = len(t_arr)
+
 
 # mean the forces
 # arr_dic['o_a_oi'][:,:] = np.mean(arr_dic['o_a_oi'], axis=0)
@@ -72,7 +80,7 @@ for i in range(N):
 
     qa = arr_dic['qa'][i,:]
     dqa = dqa_filt_arr[i,:]
-    ddqa = ddqa_filt_arr[i,:]
+    ddqa = ddqa_filt_arr[i,:]*0
     o_R_i = o_R_i_arr[i,:,:]
     i_omg_oi = i_omg_oi_arr[i,:]
     i_domg_i = i_domg_i_arr[i,:]
@@ -87,7 +95,7 @@ for i in range(N):
     o_forces_arr[i,:] = o_forces.flatten()
     l_forces_arr[i,:] = l_forces.flatten()
 
-    detect_arr[i,:] = (o_forces[:,2] > THRESH_VIZ)*THRESH_VIZ
+    detect_arr[i,:] = (o_forces[:,2] > THRESH_VIZ)
 
     # print(1/0)
 
@@ -96,14 +104,18 @@ for i in range(N):
 arr_dic['l_forces'] = l_forces_arr
 
 
-
-np.savez(DATA_FOLDER+OUT_FILE_NAME, **arr_dic)
-print(DATA_FOLDER+OUT_FILE_NAME, ' saved')
+if SAVE:
+    np.savez(DATA_FOLDER+OUT_FILE_NAME, **arr_dic)
+    print(DATA_FOLDER+OUT_FILE_NAME, ' saved')
 
 q = robot.model.referenceConfigurations['standing']
 robot.com(q)
 m = robot.data.mass[0]
 g = robot.model.gravity
+
+
+o_forces_sum[:,:] = np.mean(o_forces_sum, axis=0)
+
 
 plt.figure('o f sum')
 plt.plot(t_arr, o_forces_sum[:,0], 'r.', markersize=1)
@@ -137,9 +149,19 @@ for k in range(NL):
     # plt.plot(t_arr, o_forces_arr[:,3*k+0], 'r', markersize=1)
     # plt.plot(t_arr, o_forces_arr[:,3*k+1], 'g', markersize=1)
     plt.plot(t_arr, o_forces_arr[:,3*k+2], 'b', markersize=1)
-    plt.plot(t_arr, detect_arr[:,k], 'k')
+    plt.plot(t_arr, detect_arr[:,k]*THRESH_VIZ, 'k')
+    plt.plot(t_arr, arr_dic['contactStatus'][:,k]*THRESH_VIZ*0.9, 'r', markersize=1)
 
-
+# fig, axs = plt.subplots(1,1, figsize=(6,2.2))
+# fig.canvas.set_window_title('Forces solo leg 1')
+# axs.plot(t_arr, o_forces_arr[:,0], 'r.', markersize=1)
+# axs.plot(t_arr, o_forces_arr[:,1], 'g.', markersize=1)
+# axs.plot(t_arr, o_forces_arr[:,2], 'b.', markersize=1)
+# axs.set_xlabel('time [s]')
+# axs.set_ylabel('forces [N]')
+# axs.yaxis.set_label_position("right")
+# axs.grid(True)
+# fig.savefig('forces_solo_1leg.pdf')
 
 
 plt.show()

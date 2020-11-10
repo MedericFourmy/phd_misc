@@ -7,6 +7,11 @@ import time
 import numpy as np
 import pandas as pd
 import subprocess
+import matplotlib
+font = {'family' : 'DejaVu Sans',
+        'weight' : 'normal',
+        'size'   : 11}
+matplotlib.rc('font', **font)
 import matplotlib.pyplot as plt
 import pinocchio as pin
 from experiment_naming import dirname_from_params_path
@@ -42,7 +47,8 @@ if RUN_SIMULATION:
     t1 = time.time()
     try:
         print('Running ', RUN_FILE)
-        subprocess.run(RUN_FILE, stdout=subprocess.DEVNULL, check=True)
+        # subprocess.run(RUN_FILE, stdout=subprocess.DEVNULL, check=True)
+        subprocess.run(RUN_FILE, check=True)
     except subprocess.CalledProcessError as e:
         raise(e)
     print('time: ', time.time()-t1)
@@ -240,13 +246,30 @@ if struct == 'POVCDL':
 
 
     # Estimated bias
-    fig = plt.figure('COM bias')
-    plt.plot(df_kfs['t'], df_kfs['bpx'], 'rx', label='bpx')
-    plt.plot(df_kfs['t'], df_kfs['bpy'], 'gx', label='bpy')
-    plt.plot(df_kfs['t'], df_kfs['bpz'], 'bx', label='bpz')
-    plt.legend()
-    if SAVE_FIGURES: fig.savefig(PATH+'com_bias_est.png')
+    # fig = plt.figure('COM bias')
+    # # fig.set_size_inches((6,2))
+    # plt.plot(df_kfs['t'], df_kfs['bpx'], 'rx', label='bpx')
+    # plt.plot(df_kfs['t'], df_kfs['bpy'], 'gx', label='bpy')
+    # plt.plot(df_kfs['t'], df_kfs['bpz'], 'bx', label='bpz')
+    # plt.grid()
+    # plt.xlabel('Time [s]')
+    # plt.ylabel('Bias [m]')
+    # # plt.legend()
+    # if SAVE_FIGURES: fig.savefig(PATH+'com_bias_est.png')
+    # if SAVE_FIGURES: fig.savefig(PATH+'com_bias_est.pdf')
 
+    fig, axs = plt.subplots(1,1, figsize=(6,2))
+    fig.canvas.set_window_title('COM bias')
+    axs.plot(df_kfs['t'], df_kfs['bpx'], 'rx', markersize=3)
+    axs.plot(df_kfs['t'], df_kfs['bpy'], 'gx', markersize=3)
+    axs.plot(df_kfs['t'], df_kfs['bpz'], 'bx', markersize=3)
+    axs.set_ylabel('bias [m]')
+    axs.yaxis.set_label_position("right")
+    axs.grid(True)
+    axs.set_xlabel('time [s]')
+    # axs[0].legend(loc='lower center', bbox_to_anchor=(0.5, 1), fancybox=True, shadow=True, ncol=2)
+    if SAVE_FIGURES: fig.savefig(PATH+'com_bias_est.png')
+    if SAVE_FIGURES: fig.savefig(PATH+'com_bias_est.pdf')
 
     print('Delta cdz')
     print(df_est['cdz'].iloc[-1] - df_est['cdz'].iloc[0])

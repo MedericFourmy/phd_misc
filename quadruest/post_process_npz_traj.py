@@ -50,41 +50,48 @@ DATA_FOLDER_RESULTS = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experimen
 
 # from wolf estimation
 data_file = 'out.npz'
+data_file_post = 'out_post.npz'
 
 # Keys:
 print('Reading ', DATA_FOLDER_RESULTS+data_file)
-res_arr_dic = np.load(DATA_FOLDER_RESULTS+data_file)
-# res_arr_dic = shortened_arr_dic(res_arr_dic, 1000, -1000)
+arr_dic = np.load(DATA_FOLDER_RESULTS+data_file)
+# arr_dic = shortened_arr_dic(arr_dic, 1000, 2000)
 
 dt = 1e-3
-t_arr = res_arr_dic['t']
+t_arr = arr_dic['t']
 N = len(t_arr)
 print('N: ', N)
 # GT
-w_p_wm_arr = res_arr_dic['w_p_wm']
-w_q_m_arr = res_arr_dic['w_q_m']
-w_v_wm_arr = res_arr_dic['w_v_wm']
-m_v_wm_arr = res_arr_dic['m_v_wm']
+w_p_wm_arr = arr_dic['w_p_wm']
+w_q_m_arr = arr_dic['w_q_m']
+w_v_wm_arr = arr_dic['w_v_wm']
+m_v_wm_arr = arr_dic['m_v_wm']
 
-o_q_b_arr = res_arr_dic['o_q_b']
-o_p_ob_arr = res_arr_dic['o_p_ob']
-o_v_ob_arr = res_arr_dic['o_v_ob']
+o_q_b_arr = arr_dic['o_q_b']
+o_p_ob_arr = arr_dic['o_p_ob']
+o_v_ob_arr = arr_dic['o_v_ob']
+
+o_a_ob_savgol_arr = signal.savgol_filter(o_v_ob_arr, window_length=21, polyorder=3, deriv=1, axis=0, delta=dt, mode='mirror')
 
 
-POVCDL = 'o_p_oc' in res_arr_dic
+
+POVCDL = 'o_p_oc' in arr_dic
 o_p_oc_arr = 42*np.ones((N,3))
 o_v_oc_arr = 42*np.ones((N,3))
 b_v_oc_arr = 42*np.ones((N,3))
+o_Lc_arr = 42*np.ones((N,3))
 
 if POVCDL:
-    o_p_oc_arr = res_arr_dic['o_p_oc']
-    o_v_oc_arr = res_arr_dic['o_v_oc']
+    o_p_oc_arr = arr_dic['o_p_oc']
+    o_v_oc_arr = arr_dic['o_v_oc']
+    o_Lc_arr = arr_dic['o_Lc']
+
 
 
 # use IMU orientation instead of Mo-Cap to compare with estimator
 # o_p_ob_arr = np.zeros((N,3))
 # w_p_wm_arr = np.zeros((N,3))
-# w_q_m_arr = res_arr_dic['o_q_i']
+# w_q_m_arr = arr_dic['o_q_i']
 
 
 #####################################
@@ -93,7 +100,7 @@ NB_OVER = 5
 
 # compute filterd Mo-Cap velocity
 w_p_wm_arr_sub = w_p_wm_arr[::NB_OVER]
-w_v_wm_arr_sagol_sub = signal.savgol_filter(w_p_wm_arr_sub, window_length=21, polyorder=2, deriv=1, axis=0, delta=NB_OVER*dt, mode='mirror')
+w_v_wm_arr_sagol_sub = signal.savgol_filter(w_p_wm_arr_sub, window_length=21, polyorder=3, deriv=1, axis=0, delta=NB_OVER*dt, mode='mirror')
 w_v_wm_arr_sagol = w_v_wm_arr_sagol_sub.repeat(NB_OVER, axis=0) 
 
 # plt.figure('Mo-Cap velocity filtering')
@@ -140,7 +147,41 @@ res_folder = 'res_for_rpg_'+datetime.datetime.now().strftime("%y_%m_%d__%H_%M_%S
 os.makedirs(res_folder)
 np.savetxt(res_folder+'stamped_traj_estimate.txt', pose_est, delimiter=' ')
 np.savetxt(res_folder+'stamped_groundtruth.txt',   pose_gtr, delimiter=' ')
+"""
+Note: Trajectory reads the traj in stamped_traj_estimate.txt and aligns it with the one in stamped_groundtruth.txt.
+The resulting arrays are respectively sored in traj.X_es_aligned and traj.X_gt. 
+traj.X_gt is not modified -> exactly the same as what is in stamped_groundtruth.txt.
+"""
 traj = rpg_traj.Trajectory(res_folder, align_type='se3', align_num_frames=1)  # settings ensured by eval_cfg.yaml
+# 'a' like aligned
+a_p_ab_arr = traj.p_es_aligned
+a_q_b_arr = traj.q_es_aligned
+
+# compute the relative transform applied to the estimation trajectory and propagate it to center of mass quantities
+
+a_T_b0 = pin.SE3(pin.Quaternion(a_q_b_arr[0,:].reshape((4,1))).toRotationMatrix(), a_p_ab_arr[0,:])
+o_T_b0 = pin.SE3(pin.Quaternion(o_q_b_arr[0,:].reshape((4,1))).toRotationMatrix(), o_p_ob_arr[0,:])
+a_T_o = a_T_b0 * o_T_b0.inverse()  # compute alignment transformation based on the first frame
+a_R_o = a_T_o.rotation
+
+# align CoM trajectory
+a_p_ac_arr = [a_T_o*o_p_oc for o_p_oc in o_p_oc_arr]
+a_v_ac_arr = [a_R_o*o_v_oc for o_v_oc in o_v_oc_arr]
+a_L_arr = [a_R_o@o_Lc for o_Lc in o_Lc_arr]
+
+
+# save in a new file all needed things for display
+keys_to_keep = ['t', 'w_p_wm', 'w_q_m', 'qa']
+arr_dic_post = {k: arr_dic[k] for k in keys_to_keep}
+arr_dic_post['a_p_ab'] = a_p_ab_arr
+arr_dic_post['a_q_b'] = a_q_b_arr
+arr_dic_post['a_p_ac'] = a_p_ac_arr 
+arr_dic_post['a_L'] = a_L_arr 
+
+print('Saving ', DATA_FOLDER_RESULTS+data_file_post)
+np.savez(DATA_FOLDER_RESULTS+data_file_post, **arr_dic_post)
+
+
 
 traj.compute_absolute_error()
 # traj.compute_boxplot_distances()
@@ -249,6 +290,20 @@ axs[2].set_xlabel('time [s]')
 # axs[0].legend(loc='lower center', bbox_to_anchor=(0.5, 1), fancybox=True, shadow=True, ncol=2)
 axs[0].legend()
 fig.savefig(res_folder+'base_position'+EXT)
+
+
+fig, axs = plt.subplots(3,1, figsize=FIGSIZE)
+fig.canvas.set_window_title('base_acceleration')
+ylabels = ['Ax [m/s]', 'Ay [m/s]', 'Az [m/s]']
+for i in range(3):
+    axs[i].plot(t_arr, o_a_ob_savgol_arr[:,i], 'b', markersize=1, label='base')
+    axs[i].set_ylabel(ylabels[i])
+    axs[i].yaxis.set_label_position("right")
+    axs[i].grid(GRID)
+axs[2].set_xlabel('time [s]')
+# axs[0].legend(loc='lower center', bbox_to_anchor=(0.5, 1), fancybox=True, shadow=True, ncol=2)
+axs[0].legend()
+fig.savefig(res_folder+'base_acceleration'+EXT)
 
 
 if POVCDL:

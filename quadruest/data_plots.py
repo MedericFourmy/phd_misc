@@ -22,11 +22,15 @@ BASE_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/'
 # last data with turned imu
 # data_file = 'Logs_09_10_20_soir/data_2020_10_09_18_58.npz'
 
-data_file = "Logs_15_10_2020/data_2020_10_15_14_34.npz"
+# data_file = "Logs_15_10_2020/data_2020_10_15_14_34.npz"  # standing 
+data_file = "Logs_15_10_2020/data_2020_10_15_14_36.npz"    # sinXYZ
+
+# data_file = "data_2020_10_31_20_12.npz"
+# data_file = "Logs_15_10_2020/data_2020_10_15_14_38.npz"
 
 
 arr_dic = read_data_file_laas(BASE_FOLDER+data_file, dt)
-arr_dic = shortened_arr_dic(arr_dic, 2000, len(arr_dic['t'])-200)
+# arr_dic = shortened_arr_dic(arr_dic, 2000, len(arr_dic['t'])-200)
 # arr_dic = shortened_arr_dic(arr_dic, 5000, 7150)
 
 t_arr = arr_dic['t']
@@ -41,7 +45,11 @@ t_arr = arr_dic['t']
 # 'w_v_wm': w_v_wm_file, 
 # 'qa': qa_file, 
 # 'dqa': dqa_file, 
-# 'tau': tau_file, 
+# 'tau': tau_file,
+#  
+
+i_a_oi_arr = np.array([o_R_i.T@o_a_oi for o_R_i, o_a_oi in zip(arr_dic['o_R_i'], arr_dic['o_a_oi'])])
+
 
 o_qvec_i_wolf = np.array([0.0035, -0.0122, 0.68683, 0.72673])
 o_q_i_wolf = pin.Quaternion(o_qvec_i_wolf.reshape((4,1)))
@@ -95,6 +103,14 @@ plt.subplot(3,1,2)
 plt.plot(t_arr, arr_dic['o_a_oi'][:,1], '.', markersize=1)
 plt.subplot(3,1,3)
 plt.plot(t_arr, arr_dic['o_a_oi'][:,2], '.', markersize=1)
+
+plt.figure('i_a_oi')
+plt.subplot(3,1,1)
+plt.plot(t_arr, i_a_oi_arr[:,0], '.', markersize=1)
+plt.subplot(3,1,2)
+plt.plot(t_arr, i_a_oi_arr[:,1], '.', markersize=1)
+plt.subplot(3,1,3)
+plt.plot(t_arr, i_a_oi_arr[:,2], '.', markersize=1)
 
 
 plt.figure('i_omg_oi')

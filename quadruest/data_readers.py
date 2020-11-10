@@ -117,7 +117,7 @@ def read_data_file_laas(file_path, dt):
         'w_p_wm': data['mocapPosition'], 
         'w_q_m': data['mocapOrientationQuat'], 
         'w_R_m': data['mocapOrientationMat9'], 
-        'w_v_wm': data['mocapVelocity'],
+        'w_v_wm': data['mocapVelocity']
     }
 
     N = min(arr.shape[0] for key, arr in arr_dic.items())
@@ -139,6 +139,9 @@ def read_data_file_laas(file_path, dt):
     # roll/pitch/yaw
     arr_dic['o_rpy_i'] = np.array([pin.rpy.matrixToRpy(R) for R in arr_dic['o_R_i']])
     arr_dic['w_rpy_m'] = np.array([pin.rpy.matrixToRpy(R) for R in arr_dic['w_R_m']])
+
+    if 'contactStatus' in data:
+        arr_dic['contactStatus'] = data['contactStatus']
 
     return arr_dic
 
