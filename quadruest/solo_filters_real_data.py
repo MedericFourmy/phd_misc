@@ -14,7 +14,7 @@ from filters import ImuLegKF, ImuLegCF
 from data_readers import read_data_files_mpi, read_data_file_laas, shortened_arr_dic
 
 SOLO12 = True
-THRESH_FZ = 2  # minimum force to consider stable contact from estimated normal force (N)
+THRESH_FZ = 4  # minimum force to consider stable contact from estimated normal force (N)
 ARTIFICIAL_BIAS_BASE_LINK = np.array([0.03, 0.06, -0.04])
 
 if SOLO12:
@@ -44,9 +44,7 @@ contact_frame_ids = [robot.model.getFrameId(leg_name) for leg_name in contact_fr
 # Base to IMU transformation
 # b_p_bi = np.zeros(3)
 b_p_bi = np.array([0.1163, 0.0, 0.02])
-# b_q_i  = np.array([0, 0, 0, 1])
-b_q_i  = np.array([0.00000592745,  -0.03255761280,  -0.00025745595,  7.06732091e-01])  # previously
-# b_q_i  = np.array([1.05553594e-06,  -1.59344928e-02,  -9.36773870e-05,  7.07017014e-01])
+b_q_i  = np.array([0, 0, 0, 1])
 
 b_T_i = pin.SE3((pin.Quaternion(b_q_i.reshape((4,1)))).toRotationMatrix(), b_p_bi)
 i_T_b = b_T_i.inverse()
@@ -233,10 +231,10 @@ for i in range(N):
     o_R_b = o_R_i @ i_R_b
     o_R_b_arr[i,:] = o_R_b
     o_q_b_arr[i,:] = pin.Quaternion(o_R_b_arr[i,:]).coeffs()
-    print('x_arr_kf[i,0:3]:                  ', x_arr_kf[i,0:3])
-    print('i_p_ib:                           ', i_p_ib)
-    print('o_R_i @ i_p_ib:                   ', o_R_i @ i_p_ib)
-    print('x_arr_kf[i,0:3] + o_R_i @ i_p_ib: ', x_arr_kf[i,0:3] + o_R_i @ i_p_ib)
+    # print('x_arr_kf[i,0:3]:                  ', x_arr_kf[i,0:3])
+    # print('i_p_ib:                           ', i_p_ib)
+    # print('o_R_i @ i_p_ib:                   ', o_R_i @ i_p_ib)
+    # print('x_arr_kf[i,0:3] + o_R_i @ i_p_ib: ', x_arr_kf[i,0:3] + o_R_i @ i_p_ib)
     o_p_ob_kf_arr[i,:] = x_arr_kf[i,0:3] + o_R_i @ i_p_ib
     o_v_ob_kf_arr[i,:] = x_arr_kf[i,3:6] + o_R_i @ np.cross(i_omg_oi, i_p_ib)
     o_p_ob_cf_arr[i,:] = x_arr_cf[i,0:3] + o_R_i @ i_p_ib
@@ -262,7 +260,7 @@ for i in range(N):
 
 # data to copy
 res_arr_dic = {}
-copy_lst = ['t', 'w_v_wm', 'm_v_wm', 'w_q_m', 'o_R_i', 'o_q_i', 'w_p_wm', 'i_omg_oi']
+copy_lst = ['t', 'qa', 'w_v_wm', 'm_v_wm', 'w_q_m', 'o_R_i', 'o_q_i', 'w_p_wm', 'i_omg_oi']
 for k in copy_lst:
     res_arr_dic[k] = arr_dic[k]
 # add estimated data
@@ -281,7 +279,7 @@ res_arr_dic['o_Lc'] =   o_Lc_arr
 
 
 # out_path = DATA_FOLDER_RESULTS+data_file
-out_path = DATA_FOLDER_RESULTS+'out_KF.npz'
+out_path = DATA_FOLDER_RESULTS+'out.npz'
 np.savez(out_path, **res_arr_dic)
 print(out_path, ' saved')
 
