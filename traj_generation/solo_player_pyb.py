@@ -59,13 +59,14 @@ def forces_from_torques_full(model, data, q, v, dv, tauj, Jlinvel):
 DT = 0.001
 SLEEP = False
 GUION = True
-NOFEET = True
-SAVE_CS = True
+NOFEET = False
+SAVE_CS = False
 
 if NOFEET:
     URDF_NAME = 'solo12_nofeet.urdf'
 else:
-    URDF_NAME = 'solo12.urdf'
+    URDF_NAME = 'solo12_pointed_feet.urdf'
+    # URDF_NAME = 'solo12.urdf'
 path = '/opt/openrobots/share/example-robot-data/robots/solo_description'
 urdf = path + '/robots/' + URDF_NAME
 srdf = path + '/srdf/solo.srdf'

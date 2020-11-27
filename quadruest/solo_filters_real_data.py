@@ -1,18 +1,19 @@
+import sys
 import time
 import numpy as np
 import pinocchio as pin
 import eigenpy
 eigenpy.switchToNumpyArray()
-# from example_robot_data import loadANYmal
 import curves
 from multicontact_api import ContactSequence
 import matplotlib.pyplot as plt
 
 from contact_forces_estimator import ContactForcesEstimator, ContactForceEstimatorGeneralizedMomentum
-from filters import ImuLegKF, ImuLegCF
+from filters import ImuLegKF, ImuLegCF, cross3
 
 from data_readers import read_data_files_mpi, read_data_file_laas, shortened_arr_dic
 
+SHOW = '--show' in sys.argv
 SOLO12 = True
 THRESH_FZ = 4  # minimum force to consider stable contact from estimated normal force (N)
 ARTIFICIAL_BIAS_BASE_LINK = np.array([0.03, 0.06, -0.04])
@@ -57,9 +58,9 @@ i_p_ib = i_T_b.translation
 
 # measurements to be used in KF update
 # MEASUREMENTS = (0,0,0)  # nothing happens
-# MEASUREMENTS = (1,0,0)  # only kin
+MEASUREMENTS = (1,0,0)  # only kin
 # MEASUREMENTS = (0,1,0)  # only diff kin
-MEASUREMENTS = (1,1,0)  # all kinematics
+# MEASUREMENTS = (1,1,0)  # all kinematics
 # MEASUREMENTS = (1,1,1)  # all kinematics + foot height
 
 ##############################################
@@ -142,12 +143,12 @@ x_init = np.concatenate((o_p_oi, o_v_oi, *o_p_ol_lst))
 # prior covariances
 std_p_prior = 0.01*np.ones(3)
 std_v_prior = 1*np.ones(3)
-std_pl_priors = 0.1*np.ones(3*nb_feet)
+std_pl_priors = 10*np.ones(3*nb_feet)
 std_prior = np.concatenate((std_p_prior, std_v_prior, std_pl_priors))
 
 # filter noises
 std_kf_dic = {
-    'std_foot': 0.1,# process noise on foot dynamics when in contact -> raised when stable contact interuption
+    'std_foot': 0.1,  # m/sqrt(Hz) process noise on foot dynamics when in contact -> raised when stable contact interuption
     'std_acc': 0.1,# noise on linear acceleration measurements
     'std_wb': 0.001,# noise on angular velocity measurements
     'std_qa': 0.05,# noise on joint position measurements
@@ -198,9 +199,9 @@ for i in range(N):
     # compute forces
     o_R_b = o_R_i@i_R_b
     b_omg_ob = b_R_i@i_omg_oi
-    # b_v_ob = o_R_b.T @ o_v_oi + np.cross(b_omg_ob, b_p_bi) 
+    # b_v_ob = o_R_b.T @ o_v_oi + cross3(b_omg_ob, b_p_bi) 
     b_v_ob = np.zeros(3) 
-    o_a_ob = o_a_oi + o_R_i@np.cross(i_omg_oi, np.cross(i_omg_oi, i_p_ib))     # acceleration composition (neglecting i_domgdt_oi x i_p_ib)
+    o_a_ob = o_a_oi + o_R_i@cross3(i_omg_oi, cross3(i_omg_oi, i_p_ib))     # acceleration composition (neglecting i_domgdt_oi x i_p_ib)
     # o_forces = cforces_est.compute_contact_forces(qa, dqa, o_R_b, b_v_ob, b_omg_ob, o_a_ob, tau)
     o_forces = cforces_est.compute_contact_forces2(qa, dqa, np.zeros(3), o_R_i, i_omg_oi, np.zeros(3), o_a_oi, tau, world_frame=True)
     o_forces_arr[i,:] = o_forces.flatten()
@@ -236,13 +237,13 @@ for i in range(N):
     # print('o_R_i @ i_p_ib:                   ', o_R_i @ i_p_ib)
     # print('x_arr_kf[i,0:3] + o_R_i @ i_p_ib: ', x_arr_kf[i,0:3] + o_R_i @ i_p_ib)
     o_p_ob_kf_arr[i,:] = x_arr_kf[i,0:3] + o_R_i @ i_p_ib
-    o_v_ob_kf_arr[i,:] = x_arr_kf[i,3:6] + o_R_i @ np.cross(i_omg_oi, i_p_ib)
+    o_v_ob_kf_arr[i,:] = x_arr_kf[i,3:6] + o_R_i @ cross3(i_omg_oi, i_p_ib)
     o_p_ob_cf_arr[i,:] = x_arr_cf[i,0:3] + o_R_i @ i_p_ib
-    o_v_ob_cf_arr[i,:] = x_arr_cf[i,3:6] + o_R_i @ np.cross(i_omg_oi, i_p_ib)
+    o_v_ob_cf_arr[i,:] = x_arr_cf[i,3:6] + o_R_i @ cross3(i_omg_oi, i_p_ib)
     # o_p_ob_kf_arr[i,:] = x_arr_kf[i,0:3] + o_R_b @ b_p_bi
-    # o_v_ob_kf_arr[i,:] = x_arr_kf[i,3:6] + o_R_b @ np.cross(i_omg_oi, b_p_bi)
+    # o_v_ob_kf_arr[i,:] = x_arr_kf[i,3:6] + o_R_b @ cross3(i_omg_oi, b_p_bi)
     # o_p_ob_cf_arr[i,:] = x_arr_cf[i,0:3] + o_R_b @ b_p_bi
-    # o_v_ob_cf_arr[i,:] = x_arr_cf[i,3:6] + o_R_b @ np.cross(i_omg_oi, b_p_bi)
+    # o_v_ob_cf_arr[i,:] = x_arr_cf[i,3:6] + o_R_b @ cross3(i_omg_oi, b_p_bi)
     # if (i % 100 ) == 0:
     #     print(i)
 
@@ -326,4 +327,5 @@ for i in range(nb_feet):
     plt.plot(t_arr, feets_in_contact_arr[:,i], '.', label=contact_frame_names[i], markersize=1)
 plt.legend()
 
-plt.show()
+if SHOW:
+    plt.show()

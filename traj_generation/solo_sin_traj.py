@@ -6,7 +6,7 @@ from tsid_wrapper import TsidWrapper
 import conf_solo12 as conf
 from traj_logger import TrajLogger
 
-TRAJ_NAME = 'solo_sin_y_notrunk'
+TRAJ_NAME = 'solo_sin_smaller'
 # UNCOMMENT TO DISABLE TRUNK TASK
 conf.w_trunk = 0
 
@@ -20,10 +20,10 @@ data = tsid_solo.invdyn.data()
 q, v = tsid_solo.q, tsid_solo.v
 
 # Params for Com trajectory
-amp        = np.array([-0.0, 0.02, 0.0])                 # amplitude of com mvt
+amp        = np.array([-0.01, 0.02, 0.01])                 # amplitude of com mvt
 # amp        = np.array([0.0, 0.0, 0.0])                  # amplitude of com mvt
 offset     = robot.com(data) - amp                         # offset of the measured CoM 
-two_pi_f             = 2*np.pi*np.array([0.2, 0.4, 0.2])   # movement frequencies along each axis
+two_pi_f             = 2*np.pi*np.array([0.2, 0.2, 0.2])   # movement frequencies along each axis
 two_pi_f_amp         = two_pi_f * amp                      # 2π function times amplitude function
 two_pi_f_squared_amp = two_pi_f * two_pi_f_amp             # 2π function times squared amplitude function
 
@@ -78,9 +78,9 @@ for i in range(0, conf.N_SIMULATION):
         time_start = time.time()
 
 
-# logger.store_csv_trajs('solo_sin_traj', sep=' ')
 if TRAJ_NAME is not None:
-    logger.store_mcapi_traj(TRAJ_NAME)
+    logger.store_csv_trajs(TRAJ_NAME, sep=' ')
+    # logger.store_mcapi_traj(TRAJ_NAME)
 
 import matplotlib.pyplot as plt
 

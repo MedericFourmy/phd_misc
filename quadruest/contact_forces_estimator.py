@@ -3,7 +3,6 @@ from numpy.linalg import pinv
 from scipy import stats
 import pinocchio as pin
 import eigenpy
-eigenpy.switchToNumpyArray()
 
 
 class ContactForcesEstimator:
