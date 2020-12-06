@@ -3,9 +3,10 @@ import numpy as np
 from data_readers import read_data_file_laas, read_data_files_mpi, shortened_arr_dic
 
 # DATA_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_09_10_20_soir/'
-DATA_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_15_10_2020/'
-IN_FILE_NAME = 'data_2020_10_15_14_34.npz'
-OUT_FILE_NAME = 'data_2020_10_15_14_34_format_shortened_CSTqa.npz'
+# DATA_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_15_10_2020/'
+# IN_FILE_NAME = 'data_2020_10_15_14_34.npz'
+# OUT_FILE_NAME = 'data_2020_10_15_14_34_format_shortened_CSTqa.npz'
+
 
 dt = 1e-3  # discretization timespan
 # Load LAAS solo8 data file

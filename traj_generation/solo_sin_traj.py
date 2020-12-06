@@ -1,3 +1,4 @@
+import sys
 import time
 import numpy as np
 import pinocchio as pin
@@ -5,6 +6,7 @@ import tsid
 from tsid_wrapper import TsidWrapper
 import conf_solo12 as conf
 from traj_logger import TrajLogger
+
 
 TRAJ_NAME = 'solo_sin_smaller'
 # UNCOMMENT TO DISABLE TRUNK TASK
@@ -20,7 +22,7 @@ data = tsid_solo.invdyn.data()
 q, v = tsid_solo.q, tsid_solo.v
 
 # Params for Com trajectory
-amp        = np.array([-0.01, 0.02, 0.01])                 # amplitude of com mvt
+amp        = np.array([-0.01, 0.03, 0.00])                 # amplitude of com mvt
 # amp        = np.array([0.0, 0.0, 0.0])                  # amplitude of com mvt
 offset     = robot.com(data) - amp                         # offset of the measured CoM 
 two_pi_f             = 2*np.pi*np.array([0.2, 0.2, 0.2])   # movement frequencies along each axis
@@ -107,4 +109,5 @@ plt.plot(logger.data_log['t'], logger.data_log['f2'][:,2], label='f2z')
 plt.plot(logger.data_log['t'], logger.data_log['f3'][:,2], label='f3z')
 plt.legend()
 plt.grid()
-plt.show()
+if '--show' in sys.argv:
+    plt.show()

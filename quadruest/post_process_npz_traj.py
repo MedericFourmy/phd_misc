@@ -251,6 +251,7 @@ if PGF:
 
 fig, axs = plt.subplots(3,1, figsize=FIGSIZE)
 fig.canvas.set_window_title('base_orientation_base_frame')
+axs[0].set_title('base_orientation_base_frame')
 ylabels = ['Roll [rad]', 'Pitch [rad]', 'Yaw [rad]']
 for i in range(3):
     axs[i].plot(t_arr, rpy_es_aligned[:,i], 'b', markersize=1, label='est')
@@ -265,6 +266,7 @@ fig.savefig(res_folder+'base_orientation_base_frame'+EXT)
 
 fig, axs = plt.subplots(3,1, figsize=FIGSIZE)
 fig.canvas.set_window_title('base_velocity_base_frame')
+axs[0].set_title('base_velocity_base_frame')
 ylabels = ['Vx [m/s]', 'Vy [m/s]', 'Vz [m/s]']
 for i in range(3):
     axs[i].plot(t_arr, b_v_ob_arr[:,i], 'b', markersize=1, label='est')
@@ -279,6 +281,7 @@ fig.savefig(res_folder+'base_velocity_base_frame'+EXT)
 
 fig, axs = plt.subplots(3,1, figsize=FIGSIZE)
 fig.canvas.set_window_title('base_position')
+axs[0].set_title('base_position')
 ylabels = ['Px [m]', 'Py [m]', 'Pz [m]']
 for i in range(3):
     axs[i].plot(t_arr, traj.p_es_aligned[:,i], 'b', markersize=1, label='est')
@@ -294,6 +297,7 @@ fig.savefig(res_folder+'base_position'+EXT)
 
 fig, axs = plt.subplots(3,1, figsize=FIGSIZE)
 fig.canvas.set_window_title('base_acceleration')
+axs[0].set_title('base_acceleration')
 ylabels = ['Ax [m/s]', 'Ay [m/s]', 'Az [m/s]']
 for i in range(3):
     axs[i].plot(t_arr, o_a_ob_savgol_arr[:,i], 'b', markersize=1, label='base')

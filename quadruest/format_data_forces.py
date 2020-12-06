@@ -6,9 +6,9 @@ from data_readers import read_data_file_laas, read_data_files_mpi, shortened_arr
 from contact_forces_estimator import ContactForcesEstimator
 from example_robot_data import loadSolo
 
-DATA_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/'
+# DATA_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/'
 # IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_34.npz'  # standing still
-IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_36.npz'    # sinXYZ
+# IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_36.npz'    # sinXYZ
 # IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_38.npz'  # stamping
 
 # data_2020_10_15_18_21: ...
@@ -24,12 +24,17 @@ IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_36.npz'    # sinXYZ
 
 # walking and stoping data
 # IN_FILE_NAME = 'Logs_05_10_2020_18h/data_2020_11_05_18_18.npz'  # standing still+walk 0.48 FAIL
-IN_FILE_NAME = 'Logs_05_10_2020_18h/data_2020_11_05_18_20.npz'  # standing still+walk 0.48
+# IN_FILE_NAME = 'Logs_05_10_2020_18h/data_2020_11_05_18_20.npz'  # standing still+walk 0.48
+
+# OUT_FILE_NAME = 'Logs_05_10_2020_18h/data_2020_11_05_18_20_format_forces.npz'
+
+DATA_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/solo-estimation/data/'
+IN_FILE_NAME = 'Experiments_Replay_30_11_2020_bis/data_2020_11_30_17_22.npz'
+OUT_FILE_NAME = 'Experiments_Replay_30_11_2020_bis/data_2020_11_30_17_22_format.npz'
 
 THRESH_VIZ = 8
 
 SAVE = True
-OUT_FILE_NAME = 'Logs_05_10_2020_18h/data_2020_11_05_18_20_format_forces.npz'
 
 
 dt = 1e-3  # discretization timespan
