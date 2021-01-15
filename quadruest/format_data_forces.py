@@ -1,5 +1,6 @@
-from scipy import signal
+import sys
 import numpy as np
+from scipy import signal
 import pinocchio as pin
 from matplotlib import pyplot as plt
 from data_readers import read_data_file_laas, read_data_files_mpi, shortened_arr_dic
@@ -29,8 +30,8 @@ from example_robot_data import loadSolo
 # OUT_FILE_NAME = 'Logs_05_10_2020_18h/data_2020_11_05_18_20_format_forces.npz'
 
 DATA_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/solo-estimation/data/'
-IN_FILE_NAME = 'Experiments_Replay_30_11_2020_bis/data_2020_11_30_17_22.npz'
-OUT_FILE_NAME = 'Experiments_Replay_30_11_2020_bis/data_2020_11_30_17_22_format.npz'
+IN_FILE_NAME = 'Experiments_Walk_17_12_2020/data_2020_12_17_14_29.npz'
+OUT_FILE_NAME = IN_FILE_NAME.split('.')[0]+'_format.npz'
 
 THRESH_VIZ = 8
 
@@ -40,7 +41,7 @@ SAVE = True
 dt = 1e-3  # discretization timespan
 arr_dic = read_data_file_laas(DATA_FOLDER+IN_FILE_NAME, dt)
 N = len(arr_dic['t'])
-# arr_dic = shortened_arr_dic(arr_dic, 0, N=N-200)
+arr_dic = shortened_arr_dic(arr_dic, 0, N=N-200)
 # arr_dic = shortened_arr_dic(arr_dic, 0, 2000)
 # arr_dic = shortened_arr_dic(arr_dic, 2000, -200)
 t_arr = arr_dic['t']
@@ -101,9 +102,6 @@ for i in range(N):
     l_forces_arr[i,:] = l_forces.flatten()
 
     detect_arr[i,:] = (o_forces[:,2] > THRESH_VIZ)
-
-    # print(1/0)
-
 
 # store forces
 arr_dic['l_forces'] = l_forces_arr
@@ -168,5 +166,5 @@ for k in range(NL):
 # axs.grid(True)
 # fig.savefig('forces_solo_1leg.pdf')
 
-
-plt.show()
+if '--show' in sys.argv:
+    plt.show()
