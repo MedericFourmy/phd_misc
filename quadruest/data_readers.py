@@ -105,10 +105,10 @@ def read_data_file_laas(file_path, dt):
     # Load data file
     data = np.load(file_path)
 
-    # o_a_oi: litteraly the imu ref frame origin acceleration (gravity is compensated!)
+    # i_a_oi: litteraly the imu ref frame origin acceleration (gravity is compensated), expressed in base frame
     arr_dic = {
         'imu_acc': data['baseAccelerometer'],
-        'o_a_oi': data['baseLinearAcceleration'],
+        'i_a_oi': data['baseLinearAcceleration'],
         'o_q_i': data['baseOrientation'], 
         'i_omg_oi': data['baseAngularVelocity'], 
         'qa': data['q_mes'], 
@@ -126,12 +126,6 @@ def read_data_file_laas(file_path, dt):
     t_arr = np.arange(N)*dt  # in seconds, starting from 0
     arr_dic['t'] = t_arr
 
-    # !!!!! Mocap orientation needs to be inverted !!!!!!
-    # quat  -> conjugate
-    # R mat -> transpose
-    # arr_dic['w_q_m'][:,:3] = -arr_dic['w_q_m'][:,:3]  # qx, qy, qz, qw -> -qx, -qy, -qz, qw
-    # arr_dic['w_R_m'] = np.array([w_R_m.T for w_R_m in arr_dic['w_R_m']])
-
     # other preprocessing (to unify formats)
     arr_dic['w_pose_wm'] = np.hstack([arr_dic['w_p_wm'], arr_dic['w_q_m']])
     arr_dic['m_v_wm'] = np.array([w_R_m.T @ w_v_wm for w_R_m, w_v_wm in zip(arr_dic['w_R_m'], arr_dic['w_v_wm'])])   # compute local mocap base velocity
@@ -139,6 +133,9 @@ def read_data_file_laas(file_path, dt):
     # roll/pitch/yaw
     arr_dic['o_rpy_i'] = np.array([pin.rpy.matrixToRpy(R) for R in arr_dic['o_R_i']])
     arr_dic['w_rpy_m'] = np.array([pin.rpy.matrixToRpy(R) for R in arr_dic['w_R_m']])
+
+    # acceleration in world frame
+    arr_dic['o_a_oi'] = np.array([o_R_i@i_a_oi for o_R_i, i_a_oi in zip(arr_dic['o_R_i'], arr_dic['i_a_oi'])]) 
 
     if 'contactStatus' in data:
         arr_dic['contactStatus'] = data['contactStatus']

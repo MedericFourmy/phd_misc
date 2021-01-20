@@ -7,30 +7,29 @@ from data_readers import read_data_file_laas, read_data_files_mpi, shortened_arr
 from contact_forces_estimator import ContactForcesEstimator
 from example_robot_data import loadSolo
 
-# DATA_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/'
-# IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_34.npz'  # standing still
-# IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_36.npz'    # sinXYZ
-# IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_38.npz'  # stamping
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_15_10_2020/data_2020_10_15_14_34.npz'  # standing still
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_15_10_2020/data_2020_10_15_14_36.npz'    # sinXYZ
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_15_10_2020/data_2020_10_15_14_38.npz'  # stamping
 
 # data_2020_10_15_18_21: ...
 # data_2020_10_15_18_23: walk
 # data_2020_10_15_18_24: walk
-# IN_FILE_NAME = 'Log_15_10_2020_part2/data_2020_10_15_18_21.npz'
-# IN_FILE_NAME = 'Log_15_10_2020_part2/data_2020_10_15_18_23.npz'
-# IN_FILE_NAME = 'Log_15_10_2020_part2/data_2020_10_15_18_24.npz'
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Log_15_10_2020_part2/data_2020_10_15_18_21.npz'
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Log_15_10_2020_part2/data_2020_10_15_18_23.npz'
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Log_15_10_2020_part2/data_2020_10_15_18_24.npz'
 
 # data_2020_10_29_18_03 walk 0.32 s, no mocap 
-# IN_FILE_NAME = 'data_2020_10_29_18_03.npz'
-# IN_FILE_NAME = 'Logs_15_10_2020/data_2020_10_15_14_38.npz'
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/data_2020_10_29_18_03.npz'
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_15_10_2020/data_2020_10_15_14_38.npz'
 
 # walking and stoping data
-# IN_FILE_NAME = 'Logs_05_10_2020_18h/data_2020_11_05_18_18.npz'  # standing still+walk 0.48 FAIL
-# IN_FILE_NAME = 'Logs_05_10_2020_18h/data_2020_11_05_18_20.npz'  # standing still+walk 0.48
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_05_10_2020_18h/data_2020_11_05_18_18.npz'  # standing still+walk 0.48 FAIL
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_05_10_2020_18h/data_2020_11_05_18_20.npz'  # standing still+walk 0.48
 
-# OUT_FILE_NAME = 'Logs_05_10_2020_18h/data_2020_11_05_18_20_format_forces.npz'
+# OUT_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_05_10_2020_18h/data_2020_11_05_18_20_format_forces.npz'
 
-DATA_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/solo-estimation/data/'
-IN_FILE_NAME = 'Experiments_Walk_17_12_2020/data_2020_12_17_14_29.npz'
+IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/solo-estimation/data/Experiments_Walk_17_12_2020/data_2020_12_17_14_25.npz'
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/solo-estimation/data/Experiments_Walk_17_12_2020/data_2020_12_17_14_29.npz'
 OUT_FILE_NAME = IN_FILE_NAME.split('.')[0]+'_format.npz'
 
 THRESH_VIZ = 8
@@ -39,7 +38,7 @@ SAVE = True
 
 
 dt = 1e-3  # discretization timespan
-arr_dic = read_data_file_laas(DATA_FOLDER+IN_FILE_NAME, dt)
+arr_dic = read_data_file_laas(IN_FILE_NAME, dt)
 N = len(arr_dic['t'])
 arr_dic = shortened_arr_dic(arr_dic, 0, N=N-200)
 # arr_dic = shortened_arr_dic(arr_dic, 0, 2000)
@@ -108,8 +107,8 @@ arr_dic['l_forces'] = l_forces_arr
 
 
 if SAVE:
-    np.savez(DATA_FOLDER+OUT_FILE_NAME, **arr_dic)
-    print(DATA_FOLDER+OUT_FILE_NAME, ' saved')
+    np.savez(OUT_FILE_NAME, **arr_dic)
+    print(OUT_FILE_NAME, ' saved')
 
 q = robot.model.referenceConfigurations['standing']
 robot.com(q)
