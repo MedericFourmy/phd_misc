@@ -250,6 +250,21 @@ if PGF:
 
 
 fig, axs = plt.subplots(3,1, figsize=FIGSIZE)
+fig.canvas.set_window_title('base_acceleration, Vel est + savgol filter')
+axs[0].set_title('base_acceleration, Vel est + savgol filter')
+ylabels = ['Ax [m/s]', 'Ay [m/s]', 'Az [m/s]']
+for i in range(3):
+    axs[i].plot(t_arr, o_a_ob_savgol_arr[:,i], 'b', markersize=1, label='base')
+    axs[i].set_ylabel(ylabels[i])
+    axs[i].yaxis.set_label_position("right")
+    axs[i].grid(GRID)
+axs[2].set_xlabel('time [s]')
+# axs[0].legend(loc='lower center', bbox_to_anchor=(0.5, 1), fancybox=True, shadow=True, ncol=2)
+axs[0].legend()
+fig.savefig(res_folder+'base_acceleration'+EXT)
+
+
+fig, axs = plt.subplots(3,1, figsize=FIGSIZE)
 fig.canvas.set_window_title('base_orientation_base_frame')
 axs[0].set_title('base_orientation_base_frame')
 ylabels = ['Roll [rad]', 'Pitch [rad]', 'Yaw [rad]']
@@ -293,21 +308,6 @@ axs[2].set_xlabel('time [s]')
 # axs[0].legend(loc='lower center', bbox_to_anchor=(0.5, 1), fancybox=True, shadow=True, ncol=2)
 axs[0].legend()
 fig.savefig(res_folder+'base_position'+EXT)
-
-
-fig, axs = plt.subplots(3,1, figsize=FIGSIZE)
-fig.canvas.set_window_title('base_acceleration')
-axs[0].set_title('base_acceleration')
-ylabels = ['Ax [m/s]', 'Ay [m/s]', 'Az [m/s]']
-for i in range(3):
-    axs[i].plot(t_arr, o_a_ob_savgol_arr[:,i], 'b', markersize=1, label='base')
-    axs[i].set_ylabel(ylabels[i])
-    axs[i].yaxis.set_label_position("right")
-    axs[i].grid(GRID)
-axs[2].set_xlabel('time [s]')
-# axs[0].legend(loc='lower center', bbox_to_anchor=(0.5, 1), fancybox=True, shadow=True, ncol=2)
-axs[0].legend()
-fig.savefig(res_folder+'base_acceleration'+EXT)
 
 
 if POVCDL:

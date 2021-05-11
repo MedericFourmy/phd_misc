@@ -5,31 +5,26 @@ import pinocchio as pin
 from matplotlib import pyplot as plt
 from data_readers import read_data_file_laas, read_data_files_mpi, shortened_arr_dic
 from contact_forces_estimator import ContactForcesEstimator
-from example_robot_data import loadSolo
+from example_robot_data import load
 
-# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_15_10_2020/data_2020_10_15_14_34.npz'  # standing still
-# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_15_10_2020/data_2020_10_15_14_36.npz'    # sinXYZ
-# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_15_10_2020/data_2020_10_15_14_38.npz'  # stamping
+# New experiments with Solo handled in the air for Mocap+IMU fusion
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_09.npz'  
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_10.npz'  
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_16.npz'  
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_17.npz'  
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_29.npz'         
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_25.npz'
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_26.npz'
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_30.npz'
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_32.npz'
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_31.npz'
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_54.npz'
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_56.npz'
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_57.npz'
+# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_59.npz'
+IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_16_03.npz'
 
-# data_2020_10_15_18_21: ...
-# data_2020_10_15_18_23: walk
-# data_2020_10_15_18_24: walk
-# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Log_15_10_2020_part2/data_2020_10_15_18_21.npz'
-# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Log_15_10_2020_part2/data_2020_10_15_18_23.npz'
-# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Log_15_10_2020_part2/data_2020_10_15_18_24.npz'
 
-# data_2020_10_29_18_03 walk 0.32 s, no mocap 
-# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/data_2020_10_29_18_03.npz'
-# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_15_10_2020/data_2020_10_15_14_38.npz'
-
-# walking and stoping data
-# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_05_10_2020_18h/data_2020_11_05_18_18.npz'  # standing still+walk 0.48 FAIL
-# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_05_10_2020_18h/data_2020_11_05_18_20.npz'  # standing still+walk 0.48
-
-# OUT_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Logs_05_10_2020_18h/data_2020_11_05_18_20_format_forces.npz'
-
-IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/solo-estimation/data/Experiments_Walk_17_12_2020/data_2020_12_17_14_25.npz'
-# IN_FILE_NAME = '/home/mfourmy/Documents/Phd_LAAS/solo-estimation/data/Experiments_Walk_17_12_2020/data_2020_12_17_14_29.npz'
 OUT_FILE_NAME = IN_FILE_NAME.split('.')[0]+'_format.npz'
 
 THRESH_VIZ = 8
@@ -37,12 +32,14 @@ THRESH_VIZ = 8
 SAVE = True
 
 
-dt = 1e-3  # discretization timespan
+# dt = 1e-3  # discretization timespan
+dt = 2e-3  # discretization timespan
 arr_dic = read_data_file_laas(IN_FILE_NAME, dt)
 N = len(arr_dic['t'])
-arr_dic = shortened_arr_dic(arr_dic, 0, N=N-200)
+# arr_dic = shortened_arr_dic(arr_dic, 0, N=N-200)
 # arr_dic = shortened_arr_dic(arr_dic, 0, 2000)
-# arr_dic = shortened_arr_dic(arr_dic, 2000, -200)
+# arr_dic = shortened_arr_dic(arr_dic, 0, 2000)
+# arr_dic = shortened_arr_dic(arr_dic, 58*50, 25*500)
 t_arr = arr_dic['t']
 N = len(t_arr)
 
@@ -68,7 +65,7 @@ i_domg_i_arr = np.array([o_R_i.T@o_domg_i for o_R_i, o_domg_i in zip(o_R_i_arr, 
 rpy_arr = np.array([pin.rpy.matrixToRpy(o_R_i) for o_R_i in o_R_i_arr])
 
 # Now compute the forces using the robot model
-robot = loadSolo(False)
+robot = load('solo12')
 robot.model.gravity.linear = np.array([0, 0, -9.806])
 LEGS = ['FL', 'FR', 'HL', 'HR']
 nb_feet = len(LEGS)
@@ -144,15 +141,15 @@ plt.plot(t_arr, rpy_arr[:,2], 'b', markersize=1)
 
 
 
-plt.figure('o forces for each leg')
-NL = 4
-for k in range(NL):
-    plt.subplot(NL,1,k+1)
-    # plt.plot(t_arr, o_forces_arr[:,3*k+0], 'r', markersize=1)
-    # plt.plot(t_arr, o_forces_arr[:,3*k+1], 'g', markersize=1)
-    plt.plot(t_arr, o_forces_arr[:,3*k+2], 'b', markersize=1)
-    plt.plot(t_arr, detect_arr[:,k]*THRESH_VIZ, 'k')
-    plt.plot(t_arr, arr_dic['contactStatus'][:,k]*THRESH_VIZ*0.9, 'r', markersize=1)
+# plt.figure('o forces for each leg')
+# NL = 4
+# for k in range(NL):
+#     plt.subplot(NL,1,k+1)
+#     # plt.plot(t_arr, o_forces_arr[:,3*k+0], 'r', markersize=1)
+#     # plt.plot(t_arr, o_forces_arr[:,3*k+1], 'g', markersize=1)
+#     plt.plot(t_arr, o_forces_arr[:,3*k+2], 'b', markersize=1)
+#     plt.plot(t_arr, detect_arr[:,k]*THRESH_VIZ, 'k')
+#     plt.plot(t_arr, arr_dic['contactStatus'][:,k]*THRESH_VIZ*0.9, 'r', markersize=1)
 
 # fig, axs = plt.subplots(1,1, figsize=(6,2.2))
 # fig.canvas.set_window_title('Forces solo leg 1')
