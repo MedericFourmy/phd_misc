@@ -1,8 +1,6 @@
-import time
 import numpy as np
 import pandas as pd
 import pinocchio as pin
-import gepetto.corbaserver
 
 
 # Remarks
@@ -148,35 +146,50 @@ def shortened_arr_dic(arr_dic, S, N=None):
         N = len(arr_dic['t'])
     return {k: arr_dic[k][S:N] for k in arr_dic}
 
+
 if __name__ == '__main__':
+    import time
+    from example_robot_data import load
+
     SLEEP = True
 
-    # folder = "data/solo12_standing_still_2020-10-01_14-22-52/2020-10-01_14-22-52/"
-    # folder = "data/solo12_com_oscillation_2020-10-01_14-22-13/2020-10-01_14-22-13/"
-    folder = "data/solo12_stamping_2020-09-29_18-04-37/2020-09-29_18-04-37/"
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_09.npz'  # Standing still (5s), mocap 200Hz
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_10.npz'  # //
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_16.npz'  # Moving up (5s), mocap 200Hz
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_17.npz'  # //
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_25.npz'  # Standing still (5s), mocap 500Hz
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_26.npz'  # //
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_29.npz'  # Moving up (5s), mocap 200Hz
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_30.npz'  # //
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_31.npz'  # Moving up->front->down (10s), mocap 500Hz
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_32.npz'  # //
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_54.npz'  # Moving up then random movements (15s), mocap 500Hz
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_56.npz'  # //
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_57.npz'  # //
+    file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_59.npz'  # Already in air, random movements (15s), mocap 500Hz
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_16_03.npz'
 
-    dt = 1e-3
-    # arr_dic = read_data_files_mpi(folder, dt)  # if default format
-    arr_dic = read_data_files_mpi(folder, dt, delimiter=',')  # with "," delimiters
+
+    # dt = 1e-3
+    dt = 2*1e-3
+    arr_dic = read_data_file_laas(file_name, dt)  # if default format
     t_arr = arr_dic['t']
     w_pose_wm_arr = arr_dic['w_pose_wm']
     qa_arr = arr_dic['qa']
 
-    print(1/0)
-
-    # robot model + viewer
-    path = '/opt/openrobots/share/example-robot-data/robots/solo_description'
-    urdf = path + '/robots/solo12.urdf'
-    srdf = path + '/srdf/solo.srdf'
-    robot = pin.RobotWrapper.BuildFromURDF(urdf, [path, ], pin.JointModelFreeFlyer())
-    gepetto.corbaserver.Client()
+    robot = load('solo12')
+    print(robot.nv)
+    robot.initViewer()
     robot.initViewer(loadModel=True)
-    robot.displayCollisions(False)
-    robot.displayVisuals(True)
 
     gui = robot.viewer.gui
-    CAMERA_TRANSFORM = [3.771324872970581, -1.4926483631134033, 0.8210919499397278,
-            0.5492536425590515, 0.271144837141037, 0.319744735956192, 0.7228860259056091]
+    CAMERA_TRANSFORM = [7.660114765167236,
+                        3.531687021255493,
+                        0.9310312271118164,
+                        0.39686328172683716,
+                        0.5807958245277405,
+                        0.5837690830230713,
+                        0.40544962882995605]
     gui.setCameraTransform('python-pinocchio', CAMERA_TRANSFORM)
     gui.addFloor('world/floor')
     gui.setLightingMode('world/floor', 'OFF')
