@@ -40,8 +40,10 @@ dt = 1e-3
 # file_path = '/home/mfourmy/Documents/Phd_LAAS/solo-estimation/data/Experiments_Replay_30_11_2020_bis/data_2020_11_30_17_18.npz'  # sin
 # file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_Replay_03_12_2020_palette/data_2020_12_03_17_36.npz'  # sin smaller
 # file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_Replay_03_12_2020_palette/data_2020_12_03_17_38.npz'  # sin traj
-# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_Replay_03_12_2020_palette/data_2020_12_03_17_41.npz'  # manual short
-file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_Replay_03_12_2020_palette/data_2020_12_03_17_44.npz'  # manual longer
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_Replay_03_12_2020_palette/data_2020_12_03_17_41.npz'  # manual short PD+
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_Replay_03_12_2020_palette/data_2020_12_03_17_44.npz'  # manual longer PD+
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Calibration_Manuelle_09_12_2020/data_2020_12_09_14_46.npz'  # manual NO CONTROL
+file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Calibration_Manuelle_09_12_2020/data_2020_12_09_14_48.npz'  # manual NO CONTROL
 arr_dic = read_data_file_laas(file_path, dt)
 dab_arr_gtr = np.array([
     0.327,
@@ -79,15 +81,19 @@ t_arr = arr_dic['t']
 N = len(t_arr)
 S = 500
 E = N - 30
+# E = N - 3000 # slip at the end
 t_arr = t_arr[S:E]
 qa_arr = arr_dic['qa'][S:E]
 N = len(t_arr)
+
+qa_arr[:,0] += 1
+
 
 
 # subsample the trajectory for quicker tests
 # np.random.seed(0)
 print('Dataset size: ', N)
-N_sub = 20000
+N_sub = 10000
 print('Sample size: ', N_sub)
 select = np.random.choice(np.arange(N), N_sub, replace=False)
 qa_arr = qa_arr[select]
