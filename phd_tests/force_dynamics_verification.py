@@ -6,7 +6,7 @@ import time
 import numpy as np
 import pinocchio as pin
 from example_robot_data import loadANYmal, loadTalos
-import curves
+import ndcurves
 from multicontact_api import ContactSequence
 import matplotlib.pyplot as plt; plt.ion()
 

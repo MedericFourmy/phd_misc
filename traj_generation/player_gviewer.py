@@ -14,10 +14,14 @@ pin.loadReferenceConfigurations(robot.model, srdf, False)
 q0 = robot.model.referenceConfigurations[reference_config_q_name]
 robot.initViewer(loadModel=True)  
 
-file_qtraj = '/home/mfourmy/Documents/Phd_LAAS/general_phd_repo/traj_generation/temp_traj/solo_stamping_q_with_pose.dat'
-# file_qtraj = '/home/mfourmy/Documents/Phd_LAAS/general_phd_repo/traj_generation/temp_traj/solo_stamping_q.dat'
-df_q = pd.read_csv(file_qtraj, sep=' ', header=None)
-q_arr = df_q.to_numpy()[:,1:]  # remove index and switch to array
+# file_qtraj = '/home/mfourmy/Documents/Phd_LAAS/general_phd_repo/traj_generation/temp_traj/solo_stamping_q_with_pose.dat'
+# # file_qtraj = '/home/mfourmy/Documents/Phd_LAAS/general_phd_repo/traj_generation/temp_traj/solo_stamping_q.dat'
+# df_q = pd.read_csv(file_qtraj, sep=' ', header=None)
+# q_arr = df_q.to_numpy()[:,1:]  # remove index and switch to array
+
+file_path = '/home/mfourmy/Documents/Phd_LAAS/data/trajs/solo_sin_back_down.npz'
+arr_dic = np.load(file_path)
+q_arr = arr_dic['q']
 
 
 N = q_arr.shape[0]

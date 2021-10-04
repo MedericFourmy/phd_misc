@@ -140,6 +140,54 @@ def read_data_file_laas(file_path, dt):
 
     return arr_dic
 
+def read_data_traj_dat(traj_path, dt):
+    # !!!!!!!!!!
+    # HYP: IMU supposed to be centered at b -> i = m = b
+    # !!!!!!!!!!
+    q_path = traj_path+'_q.dat'
+    v_path = traj_path+'_v.dat'
+    tau_path = traj_path+'_tau.dat'
+
+    df_q = pd.read_csv(q_path, sep=' ', index_col=0, header=None)
+    df_v = pd.read_csv(v_path, sep=' ', index_col=0, header=None)
+    df_tau = pd.read_csv(tau_path, sep=' ', index_col=0, header=None)
+
+    arr_dic = {}
+    t_arr = np.arange(df_q.shape[0])*dt  # in seconds, starting from 0
+    arr_dic['t'] = t_arr
+    arr_dic['qa'] = df_q.iloc[:,7:].to_numpy()
+    arr_dic['w_pose_wm'] = df_q.iloc[:,:7].to_numpy()
+    arr_dic['w_p_wm'] = arr_dic['w_pose_wm'][:,:3]
+    arr_dic['w_q_m'] = arr_dic['w_pose_wm'][:,3:]
+    arr_dic['w_R_m'] = np.array([pin.Quaternion(q).toRotationMatrix() for q in arr_dic['w_q_m']])
+
+    arr_dic['dqa'] = df_v.iloc[:,6:].to_numpy()
+    arr_dic['m_v_wm'] = df_v.iloc[:,:3].to_numpy()
+    arr_dic['i_omg_oi'] = df_v.iloc[:,3:6].to_numpy()
+    arr_dic['w_v_wm'] = np.array([w_R_m@m_v_wm for w_R_m, m_v_wm in zip(arr_dic['w_R_m'], arr_dic['m_v_wm'])])
+
+    arr_dic['tau'] = df_tau.iloc[:].to_numpy()
+
+    # dummy
+    arr_dic['o_R_i'] = arr_dic['w_R_m']
+    arr_dic['o_q_i'] = arr_dic['w_q_m']
+
+    # things we don't have: acceleration in imu frame, acc_meas...
+    # Obtain through windowed finite difference and then remove messy data at beginning and end
+    Nd = 1
+    w_p_wm_prev_arr = np.roll(arr_dic['w_p_wm'],  Nd, axis=0)
+    w_p_wm_post_arr = np.roll(arr_dic['w_p_wm'], -Nd, axis=0)
+    arr_dic['o_a_oi'] = np.array([  (w_p_wm0 + w_p_wm2 - 2*w_p_wm1)/((Nd*dt)**2)      
+                            for w_p_wm0, w_p_wm1, w_p_wm2 in zip(w_p_wm_prev_arr, arr_dic['w_p_wm'], w_p_wm_post_arr)])
+
+    arr_dic['i_a_oi'] = np.array([o_R_i.T@o_a_oi for o_R_i, o_a_oi in zip(arr_dic['o_R_i'], arr_dic['o_a_oi'])])
+    G = 9.806
+    w_g = np.array([0,0,-G])
+    arr_dic['imu_acc'] = np.array([i_a_oi - w_R_m.T@w_g for w_R_m, i_a_oi in zip(arr_dic['w_R_m'], arr_dic['i_a_oi'])])
+
+
+    return shortened_arr_dic(arr_dic, Nd, -Nd)
+
 
 def shortened_arr_dic(arr_dic, S, N=None):
     if N is None:
@@ -166,9 +214,10 @@ if __name__ == '__main__':
     # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_54.npz'  # Moving up then random movements (15s), mocap 500Hz
     # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_56.npz'  # //
     # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_57.npz'  # //
-    file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_59.npz'  # Already in air, random movements (15s), mocap 500Hz
+    # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_15_59.npz'  # Already in air, random movements (15s), mocap 500Hz
     # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_MocapIMU_2021_04_23/data_2021_04_23_16_03.npz'
 
+    file_name = '/home/mfourmy/Downloads/data_2021_05_19_16_34.npz'
 
     # dt = 1e-3
     dt = 2*1e-3

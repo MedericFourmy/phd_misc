@@ -8,7 +8,7 @@ try:
 except ImportError:
     mcapi_import = False
     print('Cannot import multicontact_api, TrajLogger.store_mcapi_traj  will not work!!')
-from curves import piecewise
+from ndcurves import piecewise
 
 class TrajLogger:
 
@@ -72,7 +72,7 @@ class TrajLogger:
         for key in self.data_log:
             self.data_log[key] = np.array(self.data_log[key])
     
-    def store_csv_trajs(self, traj_name, sep, skip_free_flyer=True, time_sec=False):
+    def store_csv_trajs(self, traj_name, sep, skip_free_flyer=True, time_sec=False, file_type='npz'):
         self.set_data_lst_as_arrays()
         q_traj = self.data_log['q'].copy()
         v_traj = self.data_log['v'].copy()
@@ -82,46 +82,60 @@ class TrajLogger:
         N = q_traj.shape[0]
         print('traj size: ', N)
 
-        df_q = pd.DataFrame()
-        df_v = pd.DataFrame()
-        df_tau = pd.DataFrame()
-        df_contacts = pd.DataFrame()
+        if file_type == 'npz':
+            d = {
+                'q': q_traj,
+                'v': v_traj,
+                'tau_ff': tau_traj,
+            }
+            np.savez(self.directory+traj_name+'.npz', **d)
+            print(traj_name, '.npz files saved in: ', self.directory)
 
-        if skip_free_flyer:
-            q_traj = q_traj[:,7:]
-            v_traj = v_traj[:,6:]
+        elif file_type =='dat':
 
-        if time_sec:
-            df_q['t'] = self.data_log['t']
-            df_v['t'] = self.data_log['t']
-            df_tau['t'] = self.data_log['t']
-            df_contacts['t'] = self.data_log['t']
+            df_q = pd.DataFrame()
+            df_v = pd.DataFrame()
+            df_tau = pd.DataFrame()
+            df_contacts = pd.DataFrame()
+
+            if skip_free_flyer:
+                q_traj = q_traj[:,7:]
+                v_traj = v_traj[:,6:]
+
+            if time_sec:
+                df_q['t'] = self.data_log['t']
+                df_v['t'] = self.data_log['t']
+                df_tau['t'] = self.data_log['t']
+                df_contacts['t'] = self.data_log['t']
+            else:
+                df_q['t'] = np.arange(N)
+                df_v['t'] = np.arange(N)
+                df_tau['t'] = np.arange(N)
+                df_contacts['t'] = np.arange(N)
+                
+            for col in range(q_traj.shape[1]):
+                colname = 'q{}'.format(col)
+                df_q[colname] = q_traj[:,col]
+            for col in range(v_traj.shape[1]):
+                colname = 'v{}'.format(col)
+                df_v[colname] = v_traj[:,col]
+            for col in range(tau_traj.shape[1]):
+                colname = 'tau{}'.format(col)
+                df_tau[colname] = tau_traj[:,col]
+            for col, cname in enumerate(self.contact_names):
+                df_contacts[cname] = contacts_traj[:,col]
+
+            df_q.to_csv(os.path.join(self.directory, '{}_q.dat'.format(traj_name)), sep=sep, index=False, header=False)
+            df_v.to_csv(os.path.join(self.directory, '{}_v.dat'.format(traj_name)), sep=sep, index=False, header=False)
+            df_tau.to_csv(os.path.join(self.directory, '{}_tau.dat'.format(traj_name)), sep=sep, index=False, header=False)
+            df_contacts.to_csv(os.path.join(self.directory, '{}_contacts.dat'.format(traj_name)), sep=sep, index=False, header=False)
+            df_contact_names = pd.DataFrame(columns=self.contact_names)
+            df_contact_names.to_csv(os.path.join(self.directory, '{}_contact_names.dat'.format(traj_name)), sep=sep, index=False, header=True)
+
+            print(traj_name, 'q, v, tau and contacts traj .dat files saved in: ', self.directory)
         else:
-            df_q['t'] = np.arange(N)
-            df_v['t'] = np.arange(N)
-            df_tau['t'] = np.arange(N)
-            df_contacts['t'] = np.arange(N)
-            
-        for col in range(q_traj.shape[1]):
-            colname = 'q{}'.format(col)
-            df_q[colname] = q_traj[:,col]
-        for col in range(v_traj.shape[1]):
-            colname = 'v{}'.format(col)
-            df_v[colname] = v_traj[:,col]
-        for col in range(tau_traj.shape[1]):
-            colname = 'tau{}'.format(col)
-            df_tau[colname] = tau_traj[:,col]
-        for col, cname in enumerate(self.contact_names):
-            df_contacts[cname] = contacts_traj[:,col]
-        
-        df_q.to_csv(os.path.join(self.directory, '{}_q.dat'.format(traj_name)), sep=sep, index=False, header=False)
-        df_v.to_csv(os.path.join(self.directory, '{}_v.dat'.format(traj_name)), sep=sep, index=False, header=False)
-        df_tau.to_csv(os.path.join(self.directory, '{}_tau.dat'.format(traj_name)), sep=sep, index=False, header=False)
-        df_contacts.to_csv(os.path.join(self.directory, '{}_contacts.dat'.format(traj_name)), sep=sep, index=False, header=False)
-        df_contact_names = pd.DataFrame(columns=self.contact_names)
-        df_contact_names.to_csv(os.path.join(self.directory, '{}_contact_names.dat'.format(traj_name)), sep=sep, index=False, header=True)
+            raise ValueError(file_type, 'not an appropriate file type')
 
-        print('q, v, tau and contacts traj .dat files saved in: ', self.directory)
 
     def store_mcapi_traj(self, traj_name):
         if not mcapi_import:

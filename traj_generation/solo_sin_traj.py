@@ -2,15 +2,15 @@ import sys
 import time
 import numpy as np
 import pinocchio as pin
-import tsid
 from tsid_wrapper import TsidWrapper
 import conf_solo12 as conf
 from traj_logger import TrajLogger
 
 
-TRAJ_NAME = 'solo_sin_smaller'
-# UNCOMMENT TO DISABLE TRUNK TASK
-conf.w_trunk = 0
+TRAJ_NAME = 'solo_sin_back_down_rots'
+# TRAJ_NAME = None  # No save
+# if 0 -> trunk task deactivated
+# conf.w_trunk = 0
 
 dt = conf.dt
 tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
@@ -21,25 +21,35 @@ model = tsid_solo.model
 data = tsid_solo.invdyn.data()
 q, v = tsid_solo.q, tsid_solo.v
 
+DT = 10.0  # seconds
+N_SIMULATION = int(DT/conf.dt)
+F = 1/DT  # mvt frequency
+
+
 # Params for Com trajectory
-amp        = np.array([-0.01, 0.03, 0.00])                 # amplitude of com mvt
-# amp        = np.array([0.0, 0.0, 0.0])                  # amplitude of com mvt
+# amplitude of com mvt
+# amp        = np.array([-0.01, 0.03, 0.00])                 
+# amp        = np.array([0.02, 0.02, -0.01])  # back, left, down
+amp        = np.array([0.01, 0.0, -0.01])  # back, left, down
+# amp        = np.array([-0.01, 0.04, 0.03]) 
+# amp        = np.array([0.0, 0.0, 0.0]) 
 offset     = robot.com(data) - amp                         # offset of the measured CoM 
-two_pi_f             = 2*np.pi*np.array([0.2, 0.2, 0.2])   # movement frequencies along each axis
+two_pi_f             = 2*np.pi*F*np.array([2, 2, 2])   # movement frequencies along each axis
 two_pi_f_amp         = two_pi_f * amp                      # 2π function times amplitude function
 two_pi_f_squared_amp = two_pi_f * two_pi_f_amp             # 2π function times squared amplitude function
 
 # Params for trunk orientation trajectory
-amp_trunk = np.deg2rad(np.array([0.0, 0.0, 0.0]))   # orientation, numbers in degrees
+amp_trunk = np.deg2rad(np.array([15, 10, 15]))   # orientation, numbers in degrees
 # amp_trunk = np.deg2rad(np.array([10.0, 10.0, 0.0]))   # orientation, numbers in degrees
-two_pi_f_trunk     = 2*np.pi*np.array([0.2, 0.2, 0.2])  # movement frequencies along each axis
+two_pi_f_trunk     = 2*np.pi*F*np.array([2, 2, 2])  # movement frequencies along each axis
 R_trunk_init = robot.framePosition(data, tsid_solo.trunk_link_id).rotation
 
 
 # Init values
 t = 0.0 # time
 time_start = time.time()
-for i in range(0, conf.N_SIMULATION):
+# for i in range(0, conf.N_SIMULATION):
+for i in range(0, N_SIMULATION):
     # set com ref
     pos_c = offset + amp * np.cos(two_pi_f*t)
     vel_c = two_pi_f_amp * (-np.sin(two_pi_f*t))
@@ -81,7 +91,7 @@ for i in range(0, conf.N_SIMULATION):
 
 
 if TRAJ_NAME is not None:
-    logger.store_csv_trajs(TRAJ_NAME, sep=' ')
+    logger.store_csv_trajs(TRAJ_NAME, sep=' ', skip_free_flyer=True)
     # logger.store_mcapi_traj(TRAJ_NAME)
 
 import matplotlib.pyplot as plt

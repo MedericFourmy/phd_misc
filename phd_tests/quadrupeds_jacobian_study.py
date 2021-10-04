@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from example_robot_data import loadANYmal
-import curves
+import ndcurves
 from multicontact_api import ContactSequence
 
 

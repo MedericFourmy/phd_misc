@@ -2,7 +2,7 @@
 # coding: utf-8
 
 import numpy as np
-import curves
+import ndcurves
 from example_robot_data import loadTalos
 from multicontact_api import ContactSequence
 import matplotlib.pyplot as plt; plt.ion()

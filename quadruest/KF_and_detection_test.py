@@ -4,7 +4,7 @@ import pinocchio as pin
 import eigenpy
 eigenpy.switchToNumpyArray()
 # from example_robot_data import loadANYmal
-import curves
+import ndcurves
 from multicontact_api import ContactSequence
 import matplotlib.pyplot as plt
 

@@ -117,5 +117,8 @@ if __name__ == '__main__':
     plt.xlabel('degrees of freedom')
     plt.ylabel('log(s)')
 
+    print('Hessian singular values')
+    print(s)
+
 
     plt.show()
