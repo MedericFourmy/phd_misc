@@ -29,11 +29,15 @@ BASE_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/'
 # data_file = "Logs_15_10_2020/data_2020_10_15_14_38.npz"
 
 
-data_file = 'IRI_10_21/data_2021_10_07_11_40_0.npz'
+# data_file = 'IRI_10_21/data_2021_10_07_11_40_0.npz'
+
+data_file = 'IRI_10_21/solo_sin_back_down_rots_pointed_feet_ters_format.npz'
 
 
 
-arr_dic = read_data_file_laas(BASE_FOLDER+data_file, dt)
+
+# arr_dic = read_data_file_laas(BASE_FOLDER+data_file, dt)
+arr_dic = np.load(BASE_FOLDER+data_file, dt)
 # arr_dic = shortened_arr_dic(arr_dic, 2000, len(arr_dic['t'])-200)
 # arr_dic = shortened_arr_dic(arr_dic, 5000, 7150)
 
@@ -52,72 +56,30 @@ plt.plot(t_arr, bacc_arr[:,0], 'r.', markersize=1)
 plt.plot(t_arr, bacc_arr[:,1], 'g.', markersize=1)
 plt.plot(t_arr, bacc_arr[:,2], 'b.', markersize=1)
 
-plt.figure('imu_acc')
-plt.subplot(3,1,1)
-plt.plot(t_arr, imu_acc_arr[:,0], '.', markersize=1)
-plt.subplot(3,1,2)
-plt.plot(t_arr, imu_acc_arr[:,1], '.', markersize=1)
-plt.subplot(3,1,3)
-plt.plot(t_arr, imu_acc_arr[:,2], '.', markersize=1)
 
-plt.figure('o_a_oi')
-plt.subplot(3,1,1)
-plt.plot(t_arr, arr_dic['o_a_oi'][:,0], '.', markersize=1)
-plt.subplot(3,1,2)
-plt.plot(t_arr, arr_dic['o_a_oi'][:,1], '.', markersize=1)
-plt.subplot(3,1,3)
-plt.plot(t_arr, arr_dic['o_a_oi'][:,2], '.', markersize=1)
-
-plt.figure('i_a_oi')
-plt.subplot(3,1,1)
-plt.plot(t_arr, i_a_oi_arr[:,0], '.', markersize=1)
-plt.subplot(3,1,2)
-plt.plot(t_arr, i_a_oi_arr[:,1], '.', markersize=1)
-plt.subplot(3,1,3)
-plt.plot(t_arr, i_a_oi_arr[:,2], '.', markersize=1)
-
-plt.figure('i_omg_oi')
-plt.subplot(3,1,1)
-plt.plot(t_arr, arr_dic['i_omg_oi'][:,0], '.', markersize=1)
-plt.subplot(3,1,2)
-plt.plot(t_arr, arr_dic['i_omg_oi'][:,1], '.', markersize=1)
-plt.subplot(3,1,3)
-plt.plot(t_arr, arr_dic['i_omg_oi'][:,2], '.', markersize=1)
-
-plt.figure('o_rpy_i')
-plt.subplot(3,1,1)
-plt.plot(t_arr, arr_dic['o_rpy_i'][:,0], '.', markersize=1)
-plt.subplot(3,1,2)
-plt.plot(t_arr, arr_dic['o_rpy_i'][:,1], '.', markersize=1)
-plt.subplot(3,1,3)
-plt.plot(t_arr, arr_dic['o_rpy_i'][:,2], '.', markersize=1)
-
-plt.figure('w_rpy_m')
-plt.subplot(3,1,1)
-plt.plot(t_arr, arr_dic['w_rpy_m'][:,0], '.', markersize=1)
-plt.subplot(3,1,2)
-plt.plot(t_arr, arr_dic['w_rpy_m'][:,1], '.', markersize=1)
-plt.subplot(3,1,3)
-plt.plot(t_arr, arr_dic['w_rpy_m'][:,2], '.', markersize=1)
+def plot_raw(t_arr, arr_dic: np.array, key: str):
+    n = arr_dic[key].shape[1]
+    c = lambda i: 'rgbk'[i] if n <=4 else ''
+    plt.figure(key)
+    for i in range(n):
+        plt.subplot(n,1,i+1)
+        plt.plot(t_arr, arr_dic[key][:,i], c(i)+'.', markersize=1)
 
 
-plt.figure('qa')
-for i in range(12):
-    plt.subplot(12,1,i+1)
-    plt.plot(t_arr, arr_dic['qa'][:,i], '.', markersize=1)
+to_plot = [
+    'imu_acc',
+    'o_a_oi',
+    'i_a_oi',
+    'i_omg_oi',
+    'o_rpy_i',
+    'w_rpy_m',
+    'w_p_wm',
+    'qa',
+    'dqa',
+]
 
-plt.figure('dqa')
-for i in range(12):
-    plt.subplot(12,1,i+1)
-    plt.plot(t_arr, arr_dic['dqa'][:,i], '.', markersize=1)
-
-# plt.figure('o_rpy_i')
-# plt.subplot(3,1,1)
-# plt.plot(t_arr, arr_dic['o_rpy_i'][:,0], '.', markersize=1)
-# plt.subplot(3,1,2)
-# plt.plot(t_arr, arr_dic['o_rpy_i'][:,1], '.', markersize=1)
-# plt.subplot(3,1,3)
-# plt.plot(t_arr, arr_dic['o_rpy_i'][:,2], '.', markersize=1)
+for key in to_plot:
+    plot_raw(t_arr, arr_dic, key)
 
 
 plt.show()
