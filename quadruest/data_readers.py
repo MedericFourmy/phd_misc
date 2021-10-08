@@ -107,8 +107,8 @@ def read_data_file_laas(file_path, dt):
     arr_dic = {
         'imu_acc': data['baseAccelerometer'],
         'i_a_oi': data['baseLinearAcceleration'],
-        'o_q_i': data['baseOrientation'], 
         'i_omg_oi': data['baseAngularVelocity'], 
+        'o_rpy_i': data['baseOrientation'],
         'qa': data['q_mes'], 
         'dqa': data['v_mes'], 
         'tau': data['torquesFromCurrentMeasurment'],     
@@ -117,6 +117,7 @@ def read_data_file_laas(file_path, dt):
         'w_R_m': data['mocapOrientationMat9'], 
         'w_v_wm': data['mocapVelocity']
     }
+
 
     N = min(arr.shape[0] for key, arr in arr_dic.items())
     arr_dic = {key: arr[:N,:] for key, arr in arr_dic.items()}
@@ -127,7 +128,9 @@ def read_data_file_laas(file_path, dt):
     # other preprocessing (to unify formats)
     arr_dic['w_pose_wm'] = np.hstack([arr_dic['w_p_wm'], arr_dic['w_q_m']])
     arr_dic['m_v_wm'] = np.array([w_R_m.T @ w_v_wm for w_R_m, w_v_wm in zip(arr_dic['w_R_m'], arr_dic['w_v_wm'])])   # compute local mocap base velocity
-    arr_dic['o_R_i'] = np.array([pin.Quaternion(o_q_i.reshape(4,1)).toRotationMatrix() for o_q_i in arr_dic['o_q_i']])
+
+    arr_dic['o_R_i'] = np.array([pin.rpy.rpyToMatrix(o_xyz_i) for o_xyz_i in arr_dic['o_rpy_i']])
+    arr_dic['o_q_i'] = np.array([pin.Quaternion(o_R_i).coeffs() for o_R_i in arr_dic['o_R_i']])
     # roll/pitch/yaw
     arr_dic['o_rpy_i'] = np.array([pin.rpy.matrixToRpy(R) for R in arr_dic['o_R_i']])
     arr_dic['w_rpy_m'] = np.array([pin.rpy.matrixToRpy(R) for R in arr_dic['w_R_m']])

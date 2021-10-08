@@ -22,11 +22,15 @@ BASE_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/'
 # last data with turned imu
 # data_file = 'Logs_09_10_20_soir/data_2020_10_09_18_58.npz'
 
-data_file = "Logs_15_10_2020/data_2020_10_15_14_34.npz"  # standing 
+# data_file = "Logs_15_10_2020/data_2020_10_15_14_34.npz"  # standing 
 # data_file = "Logs_15_10_2020/data_2020_10_15_14_36.npz"    # sinXYZ
 
 # data_file = "data_2020_10_31_20_12.npz"
 # data_file = "Logs_15_10_2020/data_2020_10_15_14_38.npz"
+
+
+data_file = 'IRI_10_21/data_2021_10_07_11_40_0.npz'
+
 
 
 arr_dic = read_data_file_laas(BASE_FOLDER+data_file, dt)

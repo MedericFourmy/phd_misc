@@ -7,7 +7,7 @@ import conf_solo12 as conf
 from traj_logger import TrajLogger
 
 
-TRAJ_NAME = 'solo_sin_back_down_rots'
+TRAJ_NAME = 'solo_sin_back_down_rots_three'
 # TRAJ_NAME = None  # No save
 # if 0 -> trunk task deactivated
 # conf.w_trunk = 0
@@ -21,7 +21,7 @@ model = tsid_solo.model
 data = tsid_solo.invdyn.data()
 q, v = tsid_solo.q, tsid_solo.v
 
-DT = 10.0  # seconds
+DT = 30.0  # seconds
 N_SIMULATION = int(DT/conf.dt)
 F = 1/DT  # mvt frequency
 

@@ -9,7 +9,7 @@ from scipy.spatial.transform import Slerp
 from matplotlib import pyplot as plt
 from data_readers import read_data_file_laas, read_data_files_mpi, shortened_arr_dic
 from contact_forces_estimator import ContactForcesEstimator
-# from example_robot_data import load
+from example_robot_data import load
 
 
 
@@ -77,13 +77,19 @@ def interpolate_mocap(arr_dic):
 
 # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_Replay_2021_07_07/data_2021_07_07_13_36.npz'
 # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_Replay_2021_07_07/data_2021_07_07_13_38.npz'
-file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_Replay_2021_07_07/data_2021_07_07_13_39.npz'
+# file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_Replay_2021_07_07/data_2021_07_07_13_39.npz'
+
+
+# New experiments at IRI
+# file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/solo_sin_back_down_rots_pointed_feet.npz'
+# file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/solo_sin_back_down_rots_pointed_feet_bis.npz'
+file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/solo_in_air_full.npz'
 
 
 
 # OUT_FILE_NAME = file_name.split('.')[0]+'_calib_format.npz'
-OUT_FILE_NAME = file_name.split('.')[0]+'_move_format.npz'
-# OUT_FILE_NAME = file_name.split('.')[0]+'_format.npz'
+# OUT_FILE_NAME = file_name.split('.')[0]+'_move_format.npz'
+OUT_FILE_NAME = file_name.split('.')[0]+'_format.npz'
 
 THRESH_VIZ = 8
 
@@ -94,17 +100,24 @@ dt = 1e-3  # discretization timespan
 # dt = 2e-3  # discretization timespan
 arr_dic = read_data_file_laas(file_name, dt)
 interpolate_mocap(arr_dic)
-S = 0
-N = len(arr_dic['t'])
 
-# S = int(0.5 / dt)
-# N = int(17 / dt)
 
-S = int(20/dt)
-N = len(arr_dic['t'])
+################################
+# SHORTEN
+###############
+# S = 0
+# N = len(arr_dic['t'])
 
+S = int(26 / dt)
+N = int(45 / dt)
+
+# S = int(20/dt)
+# N = len(arr_dic['t'])
 
 arr_dic = shortened_arr_dic(arr_dic, S=S, N=N)
+##################################
+
+
 t_arr = arr_dic['t']
 N = len(t_arr)
 
@@ -133,7 +146,7 @@ rpy_mocap_arr = np.array([pin.rpy.matrixToRpy(R) for R in w_R_m_arr])
 
 
 # Now compute the forces using the robot model
-# robot = load('solo12')
+robot = load('solo12')
 ######################################
 # apt install problem of example_robot_data
 URDF_NAME = 'solo12.urdf'

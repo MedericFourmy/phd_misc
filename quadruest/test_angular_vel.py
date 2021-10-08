@@ -45,8 +45,15 @@ import matplotlib.pyplot as plt
 # POINTFEET DATA
 # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_Replay_2021_07_07/data_2021_07_07_13_36.npz'
 # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_Replay_2021_07_07/data_2021_07_07_13_38.npz'
-file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_Replay_2021_07_07/data_2021_07_07_13_39.npz'
+# file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/Experiments_Replay_2021_07_07/data_2021_07_07_13_39.npz'
 
+
+# file_name = '/home/mfourmy/Documents/Phd_LAAS/solocontrol/src/quadruped-reactive-walking/scripts/data_2021_10_04_18_47_0.npz'
+
+# file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/rot_in_air.npz'
+# file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/hit_3times.npz'
+# file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/hit_3times_rot.npz'
+file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/hit_3times_rot2.npz'
 
 
 # dt = 2e-3
@@ -68,8 +75,7 @@ w_R_m_arr = np.array([pin.Quaternion(q.reshape((4,1))).toRotationMatrix() for q 
 
 # to smoothen differentiation and get rid of the fact that 
 # mocap data is over-sampled from 200Hz (~) 
-N = 100  
-
+N = 1
 
 w_R_m_prev_arr = np.roll(w_R_m_arr, N, axis=0)
 w_R_m_post_arr = np.roll(w_R_m_arr, -N, axis=0)
@@ -87,7 +93,8 @@ acc_m_arr = np.array([  (w_p_wm0 + w_p_wm2 - 2*w_p_wm1)/((N*dt)**2)
 plt.figure('OMG')
 for i in range(3):
     plt.plot(t_arr, i_omg_oi_arr[:,i], 'rgb'[i], label='IMU')
-    plt.plot(t_arr, m_omg_om_arr[:,i], 'rgb'[i]+'.', label='MOCAP')
+    # plt.plot(t_arr, m_omg_om_arr[:,i], 'rgb'[i]+'.', label='MOCAP')
+    plt.plot(t_arr, np.roll(m_omg_om_arr[:,i]/4, -15), 'rgb'[i]+'.', label='MOCAP')
 plt.legend()
 
 plt.figure('ACC')
@@ -134,7 +141,7 @@ imu_acc_arr = arr_dic['imu_acc']
 plt.figure('IMU acc meas')
 for i in range(3):
     plt.plot(t_arr, imu_acc_arr[:,i], 'rgb'[i], label='IMU acc meas')
-# plt.legend()
+plt.legend()
 
 
 
