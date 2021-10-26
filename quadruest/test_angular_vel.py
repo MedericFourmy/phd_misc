@@ -53,7 +53,16 @@ import matplotlib.pyplot as plt
 # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/rot_in_air.npz'
 # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/hit_3times.npz'
 # file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/hit_3times_rot.npz'
-file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/hit_3times_rot2.npz'
+# file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/hit_3times_rot2.npz'
+
+# file_name = '/home/mfourmy/Documents/Phd_LAAS/solocontrol/src/quadruped-reactive-walking/scripts/mocap_latency_test.npz'
+# file_name = '/home/mfourmy/Documents/Phd_LAAS/solocontrol/src/quadruped-reactive-walking/scripts/mocap_latency_test2.npz'
+
+
+file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_10_21/solo_in_air_10s_format.npz'
+SCALE_OMG = 2.5
+SHIFT = -0
+# file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_10_21/solo_in_air_1min_format.npz'
 
 
 # dt = 2e-3
@@ -61,8 +70,8 @@ file_name = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_
 
 
 dt = 1e-3   # sample data
-arr_dic = read_data_file_laas(file_name, dt)  # if default format
-# arr_dic = np.load(file_name)
+# arr_dic = read_data_file_laas(file_name, dt)  # if default format
+arr_dic = np.load(file_name)
 t_arr = arr_dic['t']
 i_omg_oi_arr = arr_dic['i_omg_oi']  # angvel IMU
 w_p_wm_arr = arr_dic['w_p_wm']    # position mocap
@@ -93,8 +102,7 @@ acc_m_arr = np.array([  (w_p_wm0 + w_p_wm2 - 2*w_p_wm1)/((N*dt)**2)
 plt.figure('OMG')
 for i in range(3):
     plt.plot(t_arr, i_omg_oi_arr[:,i], 'rgb'[i], label='IMU')
-    # plt.plot(t_arr, m_omg_om_arr[:,i], 'rgb'[i]+'.', label='MOCAP')
-    plt.plot(t_arr, np.roll(m_omg_om_arr[:,i]/4, -15), 'rgb'[i]+'.', label='MOCAP')
+    plt.plot(t_arr, np.roll(m_omg_om_arr[:,i]/SCALE_OMG, SHIFT), 'rgb'[i]+'.', label='MOCAP')
 plt.legend()
 
 plt.figure('ACC')
@@ -107,7 +115,8 @@ plt.legend()
 # Compute accelerations in imu referential  
 ############################################################
 i_a_oi_arr = arr_dic['i_a_oi']       # IMU absolute acceleration
-m_p_mi = [0.1163, 0.0, 0.02]
+# m_p_mi = [0.1163, 0.0, 0.02]
+m_p_mi = [0.02, 0.0, 0.0]
 m_q_i = [0.0, 0.0, 0.0, 1.0]
 
 w_p_wi_arr = np.array([w_p_wm + w_R_m@m_p_mi  for w_p_wm, w_R_m in zip(w_p_wm_arr, w_R_m_arr)])

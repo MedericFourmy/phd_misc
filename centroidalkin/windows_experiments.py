@@ -9,6 +9,7 @@ by varying the sliding window parameters
 import os
 import sys
 import time
+from pinocchio.deprecated import XYZQUATToSe3
 import yaml
 import shutil
 import numpy as np
@@ -20,7 +21,7 @@ matplotlib.rcParams['figure.dpi'] = 100
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pinocchio as pin
-from experiment_naming import dirname_from_params
+
 
 SHOW = False
 RUN = True
@@ -29,6 +30,7 @@ RUN = True
 FILE_TYPE = 'png'
 # FILE_TYPE = 'pdf'
 CLOSE = not SHOW
+COV = False
 
 def nb_possibilities(lst):
     param_nb_lst = [len(l) for l in lst]
@@ -56,16 +58,8 @@ def diff_shift(arr):
     diff[-1,:] = diff[-2,:]
     return diff
 
-
 def qv2R(qvec):
     return pin.Quaternion(qvec.reshape((4,1))).toRotationMatrix()
-
-def posev2T(posev):
-    return pin.SE3(qv2R(posev[3:]), posev[:3])
-
-def T2posev(T):
-    return np.concatenate([T.translation, pin.Quaternion(T.rotation).coeffs()])
-
 
 
 # executable and param files paths
@@ -181,15 +175,43 @@ if not os.path.exists(FIG_DIR_PATH):
 # IRI 10/21
 ######
 # params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/solo_sin_back_down_rots_pointed_feet_format.npz'
-params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/solo_sin_back_down_rots_pointed_feet_bis_format.npz'
-params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/solo_in_air_full_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/solo_sin_back_down_rots_pointed_feet_bis_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/solo_in_air_25_45_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21/solo_sin_back_down_rots_pointed_feet_ters_format.npz'
 
+
+######
+# LAAS 10/21
+######
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_10_21/solo_sin_back_down_rots_on_planck_cleaner_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_10_21/solo_in_air_10s_format.npz'
+
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_10_21/solo_in_air_1min_0_10_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_10_21/solo_in_air_1min_23_34_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_10_21/solo_in_air_1min_36_45_format.npz'
+
+
+######
+# IRI 10/21 SECOND TIME
+######
+
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_in_air_1min_15_24_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_in_air_1min_24_34_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_in_air_1min_34_44_format.npz'
+
+
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_in_air_2min_6_42_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_in_air_2min_43_74_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_in_air_2min_74_117_format.npz'
+
+
+params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground_format.npz'
 
 
 # Choose problem statement according to the data file
-# RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_kine'
+RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_kine'
 # RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_kine_mocap'
-RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_mocap'
+# RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_mocap'
 # RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_kine_mocap'
 
 MOCAP_ALIGN = True  # align est traj wrt. mocap
@@ -210,39 +232,56 @@ params['std_prior_v'] = 1
 
 
 # MOCAP
-params['std_pose_p'] = 0.0005
+params['std_pose_p'] = 0.001
 params['std_pose_o_deg'] = 1
-b_pose_bi = 6*[0] + [1]  # SIMU
-# b_pose_bi = [0.11319228351109546, -0.025215545698249846, -0.01638201593610379, 
+# i_pose_im = 6*[0] + [1]  # SIMU
+# i_pose_im = [-0.1163, 0.0, -0.02,  0,0,0,1]  # NOMINAL, solo at laas
+# i_pose_im = [0.11319228351109546, -0.025215545698249846, -0.01638201593610379, 
 #             -0.00374592352960968, -6.326516868523575e-05, 0.004403909480908183, 0.9999832846781553]
-# b_pose_bi = [0.1163, 0.0, 0.02,  0,0,0,1]  # nominal
-params['b_p_bi'] = b_pose_bi[:3]
-params['b_q_i'] = b_pose_bi[3:]
+i_pose_im = [-0.011159771171845226, -0.007321382374722619, -0.0024773021382709696, 
+            0.0035047174131140808, 0.004237725032522593, 0.005168197514269616, 0.9999715237829807]  # imu mocap IRI good calib
+params['i_p_im'] = i_pose_im[:3]
+params['i_q_m'] = i_pose_im[3:]
 params['std_mocap_extr_p'] = 0.01
 params['std_mocap_extr_o_deg'] = 5
 
+# IMU MOCAP extr
+m_p_mb = np.array([-0.11872364, -0.0027602,  -0.01272801])
+m_q_b = np.array([0.00698701, 0.00747303, 0.00597298, 0.99992983])
+m_T_b = pin.XYZQUATToSE3(np.concatenate([m_p_mb, m_q_b]))
+b_T_m = m_T_b.inverse()
+params['m_p_mb'] = m_p_mb.tolist() 
+params['m_q_b'] = m_q_b.tolist()
+
+
+
 # std kinematic factor
-# params['std_odom3d_est'] = 0.000001  # m/(s^2 sqrt(Hz))
+# params['scale_mocap'] = 0.000001  # m/(s^2 sqrt(Hz))
 
 
 # IMU params
-params_sensor_imu['motion_variances']['a_noise'] =       0.02     # standard deviation of Acceleration noise (same for all the axis) in m/s2
+params_sensor_imu['motion_variances']['a_noise'] =       0.02    # standard deviation of Acceleration noise (same for all the axis) in m/s2
 params_sensor_imu['motion_variances']['w_noise'] =       0.03    # standard deviation of Gyroscope noise (same for all the axis) in rad/sec
-params_sensor_imu['motion_variances']['ab_rate_stdev'] = 1e-6       # m/s2/sqrt(s)           
+params_sensor_imu['motion_variances']['ab_rate_stdev'] = 1e-6    # m/s2/sqrt(s)           
 params_sensor_imu['motion_variances']['wb_rate_stdev'] = 1e-6    # rad/s/sqrt(s)
 # PRIOR IMU
 params['bias_imu_prior'] = [0]*6
 # params['std_abs_bias_acc'] =  1
 # params['std_abs_bias_gyro'] = 1
 # params['bias_imu_prior'] = [-0.008309301319705645, -0.003781564817763668, -0.00973822192542853, 0.005811674117089268, 0.00584121549049778, -0.0010103139949982967]  # calib traj
-params['std_abs_bias_acc'] =  1e-3
-params['std_abs_bias_gyro'] = 1e-3
+params['std_abs_bias_acc'] =  1e-1
+params['std_abs_bias_gyro'] = 1e-4
 
 params['dt'] = 1e-3  # 1 kHz
 # params['dt'] = 2e-3  # 500 Hz
 # params['max_t'] = 2
 params['max_t'] = 100
 
+
+
+# Load the input data (in case glitch with mocap...)
+
+input_dic = np.load(params['data_file_path'], params['dt'])
 
 
 
@@ -256,23 +295,31 @@ std_pose_o_deg = params['std_pose_o_deg']
 
 
 # time_shift_mocap_lst = [-0.015, 0, 0.015]
-time_shift_mocap_lst = [-0.015]
+# time_shift_mocap_lst = [-0.015] # IRI
+time_shift_mocap_lst = [-0.020,] # IRI 2nd optimal imu+mocap
+# time_shift_mocap_lst = [-0.018, -0.020, -0.022] # IRI
+# time_shift_mocap_lst = [0.0] # LAAS?
 # time_shift_mocap_lst = [1, 5, 10, 20, 50, 100, 1000, 10000]
-# std_odom3d_est_lst = [10, 1, 0.1, 0.01, 0.001, 0.0001   ]
-std_odom3d_est_lst = [0.01]
-# std_odom3d_est_lst = [1, 0.1, 0.01, 0.001]
-# std_odom3d_est_lst = [0.1, 0.08, 0.07, 0.06, 0.05, 0.04]
-# std_odom3d_est_lst = [0.001]
-# std_odom3d_est_lst = [10000]
+# scale_mocap_lst = [10, 1, 0.1, 0.01, 0.001, 0.0001   ]
+# scale_mocap_lst = [0.1, 1, 10]
+scale_mocap_lst = [1]
+# scale_mocap_lst = [1, 10, 100, 1000]
 
-alpha_qa_lst = [
+
+
+
+
+delta_qa_lst = [
     12*[0],
-    # [-0.05236949,  0.1165202 , -0.04332202, -0.04267062,  0.11716115, -0.04283749, -0.05571334, -0.17512618, -0.05680402, -0.09308917, 0.17800151, -0.05332573]
+    [ 0.0041, -0.0149, -0.0140, -0.0192, -0.0004, -0.0033,
+      0.0064,  0.0046,  0.0212,  0.0097,  0.0234,  0.0190, ],
+    [-0.0041, 0.0149,    0.0140, 0.0192, 0.0004, 0.0033,
+     -0.0064, -0.0046,  -0.0212,  +0.0097,  -0.0234,  -0.0190, ]
 ]
 
 time_shift_mocap_idx_lst = np.arange(len(time_shift_mocap_lst))
-std_odom3d_idx_lst = np.arange(len(std_odom3d_est_lst))
-alpha_qa_idx_lst = np.arange(len(alpha_qa_lst))
+std_odom3d_idx_lst = np.arange(len(scale_mocap_lst))
+delta_qa_idx_lst = np.arange(len(delta_qa_lst))
 
 
 ###############################
@@ -281,26 +328,35 @@ alpha_qa_idx_lst = np.arange(len(alpha_qa_lst))
 
 
 
-possibs = nb_possibilities([time_shift_mocap_lst, std_odom3d_est_lst, alpha_qa_lst])
+possibs = nb_possibilities([time_shift_mocap_lst, scale_mocap_lst, delta_qa_lst])
 print('Combinations to evaluate: ', possibs)
 
 
 RESULTS = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments_results/out.npz'
 params['out_npz_file_path'] = RESULTS
 
-rmse_pos_arr = np.zeros((len(time_shift_mocap_lst), len(std_odom3d_est_lst), len(alpha_qa_lst)))
-rmse_vel_arr = np.zeros((len(time_shift_mocap_lst), len(std_odom3d_est_lst), len(alpha_qa_lst)))
-compute_time_arr = np.zeros((len(time_shift_mocap_lst), len(std_odom3d_est_lst), len(alpha_qa_lst)))
+rmse_pos_arr = np.zeros((len(time_shift_mocap_lst), len(scale_mocap_lst), len(delta_qa_lst)))
+rmse_vel_arr = np.zeros((len(time_shift_mocap_lst), len(scale_mocap_lst), len(delta_qa_lst)))
+compute_time_arr = np.zeros((len(time_shift_mocap_lst), len(scale_mocap_lst), len(delta_qa_lst)))
 
-# for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx) in enumerate(itertools.product(time_shift_mocap_idx_lst, std_odom3d_idx_lst, alpha_qa_idx_lst)):
-for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx) in enumerate(itertools.product(time_shift_mocap_idx_lst, std_odom3d_idx_lst, alpha_qa_idx_lst)):
+
+std_pose_p = params['std_pose_p']
+std_pose_o_deg = params['std_pose_o_deg']
+
+
+for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, delta_qa_idx) in enumerate(itertools.product(time_shift_mocap_idx_lst, std_odom3d_idx_lst, delta_qa_idx_lst)):
     time_shift_mocap = time_shift_mocap_lst[time_shift_mocap_idx]
-    std_odom3d_est = std_odom3d_est_lst[std_odom3d_idx]
-    alpha_qa = alpha_qa_lst[alpha_qa_idx]
+    scale_mocap = scale_mocap_lst[std_odom3d_idx]
+    delta_qa = delta_qa_lst[delta_qa_idx]
 
-    params['alpha_qa'] = alpha_qa
-    params['std_odom3d_est'] = std_odom3d_est
+    params['delta_qa'] = delta_qa
+    # params['std_odom3d_est'] = std_odom3d_est
     params['time_shift_mocap'] = time_shift_mocap
+
+    # scale mocap
+    params['std_pose_p'] = scale_mocap*std_pose_p
+    params['std_pose_o_deg'] = scale_mocap*std_pose_o_deg
+
     with open(PARAM_FILE, 'w') as fw: yaml.dump(params, fw)
 
     with open(SENSOR_IMU_PARAM_FILE, 'w') as fw: yaml.dump(params_sensor_imu, fw)
@@ -318,13 +374,13 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx) in enumerate(i
     # if RUN:  subprocess.run(RUN_FILE, stdout=subprocess.DEVNULL)
     if RUN: subprocess.run(RUN_FILE)
     compute_time = time.time()-t1
-    compute_time_arr[time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx] = compute_time 
+    compute_time_arr[time_shift_mocap_idx, std_odom3d_idx, delta_qa_idx] = compute_time 
     print(idx_exp, ':', compute_time)
     
     config = {
         'time_shift_mocap': time_shift_mocap,
-        'std_odom3d_est': std_odom3d_est,
-        'alpha_qa': alpha_qa
+        'scale_mocap': scale_mocap,
+        'delta_qa': delta_qa
     }
     with open(FIG_DIR_PATH+'conf_{}.yaml'.format(idx_exp), 'w') as fw: yaml.dump(config, fw)
 
@@ -332,120 +388,91 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx) in enumerate(i
     arr_dic = np.load(RESULTS)
     
     # Common data
-    t_arr = arr_dic['t']
-    w_p_wm_arr = arr_dic['w_p_wm']
-    w_q_m_arr = arr_dic['w_q_m']
-    w_v_wm_arr = arr_dic['w_v_wm']
-    i_omg_oi_arr = arr_dic['i_omg_oi']
-    qa_arr = arr_dic['qa']
+    t_arr =          input_dic['t']
+    w_p_wm_gtr_arr = input_dic['w_p_wm']
+    w_q_m_gtr_arr =  input_dic['w_q_m']
+    w_v_wm_gtr_arr = input_dic['w_v_wm']
+    i_omg_oi_arr =   input_dic['i_omg_oi']
+    qa_arr =         input_dic['qa']
 
     o_p_ob_arr = arr_dic['o_p_ob']
-    o_q_b_arr = arr_dic['o_q_b']
+    o_q_b_arr =  arr_dic['o_q_b']
     o_v_ob_arr = arr_dic['o_v_ob']
     o_p_oi_arr = arr_dic['o_p_oi']
-    o_q_i_arr = arr_dic['o_q_i']
+    o_q_i_arr =  arr_dic['o_q_i']
     o_v_oi_arr = arr_dic['o_v_oi']
 
     o_p_ob_fbk_arr = arr_dic['o_p_ob_fbk']
-    o_q_b_fbk_arr = arr_dic['o_q_b_fbk']
+    o_q_b_fbk_arr =  arr_dic['o_q_b_fbk']
     o_v_ob_fbk_arr = arr_dic['o_v_ob_fbk']
     o_p_oi_fbk_arr = arr_dic['o_p_oi_fbk']
-    o_q_i_fbk_arr = arr_dic['o_q_i_fbk']
+    o_q_i_fbk_arr =  arr_dic['o_q_i_fbk']
     o_v_oi_fbk_arr = arr_dic['o_v_oi_fbk']
 
     o_p_ob_diff = diff_shift(o_p_ob_arr)
     o_v_ob_diff = diff_shift(o_v_ob_arr)
-    # rmse_pos_arr[time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx] = rmse(o_p_ob_diff).mean()
-    # rmse_vel_arr[time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx] = rmse(o_v_ob_diff).mean()
+    o_p_ob_fbk_diff = diff_shift(o_p_ob_fbk_arr)
+    o_v_ob_fbk_diff = diff_shift(o_v_ob_fbk_arr)
+    # rmse_pos_arr[time_shift_mocap_idx, std_odom3d_idx, delta_qa_idx] = rmse(o_p_ob_diff).mean()
+    # rmse_vel_arr[time_shift_mocap_idx, std_odom3d_idx, delta_qa_idx] = rmse(o_v_ob_diff).mean()
     
 
     # biases and extrinsics
     imu_bias = arr_dic['imu_bias']
     imu_bias_fbk = arr_dic['imu_bias_fbk']
-    extr_mocap_fbk = arr_dic['i_pose_ib_fbk']
-    i_pose_m_opti = extr_mocap_fbk[-1,:]
-    i_p_bm = i_pose_m_opti[:3]
-    i_q_m = i_pose_m_opti[3:]
-    i_R_m = qv2R(i_q_m)
-    i_T_m = pin.SE3(i_R_m, i_p_bm)
-    m_T_i = i_T_m.inverse()
-    m_p_mi = m_T_i.translation
-    m_R_i = m_T_i.rotation
+    extr_mocap_fbk = arr_dic['i_pose_im_fbk']
+    i_T_m = pin.XYZQUATToSE3(extr_mocap_fbk[-1,:])
+
+    # SE3
+    o_T_i_lst = [pin.XYZQUATToSE3(np.concatenate([o_p_oi, o_q_i])) for o_p_oi, o_q_i in zip(o_p_oi_arr, o_q_i_arr)]
+    o_T_i_fbk_lst = [pin.XYZQUATToSE3(np.concatenate([o_p_oi, o_q_i])) for o_p_oi, o_q_i in zip(o_p_oi_fbk_arr, o_q_i_fbk_arr)]
+    w_T_m_gtr_lst = [pin.XYZQUATToSE3(np.concatenate([w_p_wm, w_q_m])) for w_p_wm, w_q_m in zip(w_p_wm_gtr_arr, w_q_m_gtr_arr)]
 
 
-    # quaternions as rotations
-    o_R_b_arr = [qv2R(q) for q in o_q_b_arr]
-    o_R_b_fbk_arr = [qv2R(q) for q in o_q_b_fbk_arr]
-    w_R_m_arr = [qv2R(q) for q in w_q_m_arr]
 
+
+    ##########################################
+    ##########################################
+    # ALIGN TRAJECTORY WITH GLOBAL MOCAP FRAME
+    ##########################################
+    ##########################################
+
+
+    w_T_m_init = w_T_m_gtr_lst[0] if MOCAP_ALIGN else pin.SE3.Identity()
+    o_T_i_init = o_T_i_lst[0] if MOCAP_ALIGN else pin.SE3.Identity()
+    o_T_m_init = o_T_i_init*i_T_m  # align trajectories wrt. local mocap frame
+
+    # transform estimated trajectories in mocap GLOBAL frame
+    w_T_o = w_T_m_init * o_T_m_init.inverse()
+
+    # w_T_m = w_T_o*o_T_i*i_T_m -> quantity to compare with direct mocap measurements  
+    w_T_m_lst =     [w_T_o*o_T_i*i_T_m for o_T_i in o_T_i_lst]
+    w_T_m_fbk_lst = [w_T_o*o_T_i*i_T_m for o_T_i in o_T_i_fbk_lst]
+
+    # TODO: velocities...
+    w_v_wm_arr = np.array([w_T_o.rotation@o_v_ob for o_v_ob in o_v_ob_arr])
+    w_v_wm_fbk_arr = np.array([w_T_o.rotation@o_v_ob for o_v_ob in o_v_ob_fbk_arr])
+
+
+    ###################################################
+    # extract positions
+    w_p_wm_arr =     np.array([w_T_m.translation for w_T_m in w_T_m_lst]) 
+    w_p_wm_fbk_arr = np.array([w_T_m.translation for w_T_m in w_T_m_fbk_lst]) 
+    w_p_wm_gtr_arr = np.array([w_T_m.translation for w_T_m in w_T_m_gtr_lst]) 
 
     # quaternion as angle axis in world frame
-    o_aa_b_arr = np.array([pin.log(o_R_b) for o_R_b in o_R_b_arr]) 
-    o_aa_b_fbk_arr = np.array([pin.log(o_R_b_fbk) for o_R_b_fbk in o_R_b_fbk_arr]) 
-    w_aa_m_arr = np.array([pin.log(w_R_m) for w_R_m in w_R_m_arr]) 
-
-
-    w_p_wm_init = w_p_wm_arr[0,:]
-    w_R_m_init = qv2R(w_q_m_arr[0,:])
-    w_T_m_init = pin.SE3(w_R_m_init, w_p_wm_init) if MOCAP_ALIGN else pin.SE3.Identity()
-
-    o_p_ob_init = o_p_ob_arr[0,:]
-    o_R_b_init = qv2R(o_q_b_arr[0,:])
-    o_T_b_init = pin.SE3(o_R_b_init, o_p_ob_init) if MOCAP_ALIGN else pin.SE3.Identity()
-
-    o_p_ob_fbk_init = o_p_ob_fbk_arr[0,:]
-    # o_R_b_fbk_init = qv2R(o_q_b_fbk_arr[0,:]) 
-    o_R_b_fbk_init = qv2R(o_q_b_arr[0,:]) 
-    o_T_b_fbk_init = pin.SE3(o_R_b_fbk_init, o_p_ob_fbk_init) if MOCAP_ALIGN else pin.SE3.Identity()
-
-    # transform estimated trajectories in mocap frame
-    w_T_o = w_T_m_init * o_T_b_init.inverse()
-    w_p_wb_arr = np.array([w_T_o.act(o_p_ob) for o_p_ob in o_p_ob_arr])
-    w_v_wb_arr = np.array([w_T_o.rotation@o_v_ob for o_v_ob in o_v_ob_arr])
-    # w_T_o_fbk = w_T_m_init * o_T_b_init.inverse()
-    w_T_o_fbk = w_T_o  # use posteriori initial state 
-    w_p_wb_fbk_arr = np.array([w_T_o_fbk.act(o_p_ob) for o_p_ob in o_p_ob_fbk_arr])
-    w_v_wb_fbk_arr = np.array([w_T_o_fbk.rotation@o_v_ob for o_v_ob in o_v_ob_fbk_arr])
+    w_aa_m_arr =     np.array([pin.log(w_T_m.rotation) for w_T_m in w_T_m_lst]) 
+    w_aa_m_fbk_arr = np.array([pin.log(w_T_m.rotation) for w_T_m in w_T_m_fbk_lst]) 
+    w_aa_m_gtr_arr = np.array([pin.log(w_T_m.rotation) for w_T_m in w_T_m_gtr_lst]) 
 
     # Compute velocities in base frame rather than global frame
-    b_v_ob_arr = np.array([o_R_b.T@o_v_ob for o_R_b, o_v_ob in zip(o_R_b_arr, o_v_ob_arr)])
-    b_v_ob_fbk_arr = np.array([o_R_b_fbk.T@o_v_ob_fbk for o_R_b_fbk, o_v_ob_fbk in zip(o_R_b_fbk_arr, o_v_ob_fbk_arr)])
-    b_v_wm_arr = np.array([w_R_m.T@w_v_wm for w_R_m, w_v_wm in zip(w_R_m_arr, w_v_wm_arr)])
-
+    m_v_wm_arr =     np.array([w_T_m.rotation.T@w_v_wm for w_T_m, w_v_wm in zip(w_T_m_lst, w_v_wm_arr)])
+    m_v_wm_fbk_arr = np.array([w_T_m.rotation.T@w_v_wm for w_T_m, w_v_wm in zip(w_T_m_fbk_lst, w_v_wm_fbk_arr)])
+    m_v_wm_gtr_arr = np.array([w_T_m.rotation.T@w_v_wm for w_T_m, w_v_wm in zip(w_T_m_gtr_lst, w_v_wm_gtr_arr)])
 
     # Compute velocities due to lever arm and rotation
-    i_v_lever_arr = np.array([ np.cross(i_omg_oi-bi, i_R_m@m_p_mi) for i_omg_oi, bi  in zip(i_omg_oi_arr, imu_bias[:,3:])]) 
-
-
-    # Compute velocities by finite difference
-    N = 10
-    dt = 1e-3
-    # wolf est
-    o_p_ob_prev_arr = np.roll(o_p_ob_arr, N, axis=0)
-    o_p_ob_post_arr = np.roll(o_p_ob_arr, -N, axis=0)
-    o_p_ob_prev_arr[:N] = o_p_ob_prev_arr[N+1]
-    o_p_ob_post_arr[-N:] = o_p_ob_post_arr[-N-1] 
-    o_v_ob_diff_arr = np.array([  (o_p_ob2 - o_p_ob0)/((2*N*dt))      
-                            for o_p_ob0, o_p_ob2 in zip(o_p_ob_prev_arr, o_p_ob_post_arr)])
-
-    o_p_ob_fbk_prev_arr = np.roll(o_p_ob_fbk_arr, N, axis=0)
-    o_p_ob_fbk_post_arr = np.roll(o_p_ob_fbk_arr, -N, axis=0)
-    o_p_ob_fbk_prev_arr[:N] = o_p_ob_fbk_prev_arr[N+1]
-    o_p_ob_fbk_post_arr[-N:] = o_p_ob_fbk_post_arr[-N-1] 
-    o_v_ob_fbk_diff_arr = np.array([  (o_p_ob2 - o_p_ob0)/((2*N*dt))      
-                            for o_p_ob0, o_p_ob2 in zip(o_p_ob_fbk_prev_arr, o_p_ob_fbk_post_arr)])
-
-    # mocap
-    w_p_wm_prev_arr = np.roll(w_p_wm_arr, N, axis=0)
-    w_p_wm_post_arr = np.roll(w_p_wm_arr, -N, axis=0)
-    w_p_wm_prev_arr[:N] = w_p_wm_prev_arr[N+1]
-    w_p_wm_post_arr[-N:] = w_p_wm_post_arr[-N-1] 
-    w_v_wm_diff_arr = np.array([  (w_p_wm2 - w_p_wm0)/((2*N*dt))      
-                            for w_p_wm0, w_p_wm2 in zip(w_p_wm_prev_arr, w_p_wm_post_arr)])
-
-    w_v_wb_diff_arr = np.array([w_T_o.rotation@o_v_ob for o_v_ob in o_v_ob_diff_arr])
-    w_v_wb_fbk_diff_arr = np.array([w_T_o.rotation@o_v_ob for o_v_ob in o_v_ob_fbk_diff_arr])
-
+    m_p_mi = i_T_m.inverse().translation
+    i_v_lever_arr = np.array([ np.cross(i_omg_oi-bi, i_T_m.rotation@m_p_mi) for i_omg_oi, bi  in zip(i_omg_oi_arr, imu_bias[:,3:])]) 
 
     # covariances
     Nsig = 2
@@ -477,22 +504,11 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx) in enumerate(i
     # factor errors
     fac_imu_err = arr_dic['fac_imu_err']
     fac_pose_err = arr_dic['fac_pose_err']
-    
-    # # bias residuals
-    # ab_rate_stdev = 0.0001
-    # wb_rate_stdev = 0.0001
-    # sqrt_A_r_dt_inv = 1/(ab_rate_stdev * np.sqrt(max_t_kf))
-    # sqrt_W_r_dt_inv = 1/(wb_rate_stdev * np.sqrt(max_t_kf))
-    # bias_drift_error = imu_bias - np.roll(imu_bias, 1, axis=0)
-    # bias_drift_error[0,:] = bias_drift_error[1,:]
-    # bias_acc_drift_res = sqrt_A_r_dt_inv*bias_drift_error[:,:3]
-    # bias_gyr_drift_res = sqrt_W_r_dt_inv*bias_drift_error[:,3:6]
 
-
-    i_pose_ib_end = extr_mocap_fbk[-1,:]
-    i_T_b = posev2T(i_pose_ib_end)
+    i_pose_im_end = extr_mocap_fbk[-1,:]
+    i_T_b = pin.XYZQUATToSE3(i_pose_im_end)
     b_T_i = i_T_b.inverse()
-    b_pose_bi = T2posev(b_T_i)
+    i_pose_im = pin.SE3ToXYZQUAT(b_T_i)
 
 
     print(traj_name)
@@ -508,13 +524,12 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx) in enumerate(i
     print('imu_bias END')
     print('val', commas(imu_bias[-1,:]))
     print('sig', commas(envel_bi[-1,:]))
-    print('Mocap i_pose_ib END')
-    print('val', commas(b_pose_bi))
+    print('Mocap i_pose_im END')
+    print('val', commas(i_pose_im))
     print('sig', commas(envel_m[-1,:]))
     # print('origin quaternion END')
     # print('val', o_q_b_arr[0,:])
     # print('sig', o_q_b_arr[0,:])
-
 
 
 
@@ -563,9 +578,9 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx) in enumerate(i
     fig = plt.figure('Position est vs mocap'+str(i))
     plt.title('Position est vs mocap\n{}'.format(config))
     for i in range(3):
-        plt.plot(t_arr, w_p_wb_arr[:,i], 'rgb'[i], label='est')
-        plt.plot(t_arr, w_p_wb_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
-        plt.plot(t_arr, w_p_wm_arr[:,i], 'rgb'[i]+'--', label='moc')
+        plt.plot(t_arr, w_p_wm_arr[:,i], 'rgb'[i], label='est')
+        plt.plot(t_arr, w_p_wm_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
+        plt.plot(t_arr, w_p_wm_gtr_arr[:,i], 'rgb'[i]+'--', label='moc')
     plt.xlabel('t (s)')
     plt.ylabel('P (m)')
     plt.legend()
@@ -575,9 +590,9 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx) in enumerate(i
     fig = plt.figure('Velocity est vs mocap GLOBAL frame'+str(i))
     plt.title('Velocity est vs mocap\n{}'.format(config))
     for i in range(3):
-        plt.plot(t_arr, w_v_wb_arr[:,i], 'rgb'[i], label='est')
-        plt.plot(t_arr, w_v_wb_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
-        plt.plot(t_arr, w_v_wm_arr[:,i], 'rgb'[i]+'--', label='moc')
+        plt.plot(t_arr, w_v_wm_arr[:,i], 'rgb'[i], label='est')
+        plt.plot(t_arr, w_v_wm_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
+        plt.plot(t_arr, w_v_wm_gtr_arr[:,i], 'rgb'[i]+'--', label='moc')
     plt.xlabel('t (s)')
     plt.ylabel('V (m/s)')
     plt.legend()
@@ -587,28 +602,14 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx) in enumerate(i
     fig = plt.figure('Velocity est vs mocap BASE frame'+str(i))
     plt.title('Velocity est vs mocap\n{}'.format(config))
     for i in range(3):
-        plt.plot(t_arr, b_v_ob_arr[:,i], 'rgb'[i], label='est')
-        plt.plot(t_arr, b_v_ob_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
-        plt.plot(t_arr, b_v_wm_arr[:,i], 'rgb'[i]+'--', label='moc')
+        plt.plot(t_arr, m_v_wm_arr[:,i], 'rgb'[i], label='est')
+        plt.plot(t_arr, m_v_wm_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
+        plt.plot(t_arr, m_v_wm_gtr_arr[:,i], 'rgb'[i]+'--', label='moc')
     plt.xlabel('t (s)')
     plt.ylabel('V (m/s)')
     plt.legend()
     plt.savefig(FIG_DIR_PATH+'vel_{}.{}'.format(idx_exp, FILE_TYPE))
     if CLOSE: plt.close(fig=fig)
-
-
-    fig = plt.figure('Velocity est vs mocap GLOBAL frame DIFF'+str(i))
-    plt.title('Velocity est vs mocap GLOBAL frame DIFF\n{}'.format(config))
-    for i in range(3):
-        plt.plot(t_arr, w_v_wb_diff_arr[:,i], 'rgb'[i], label='est')
-        plt.plot(t_arr, w_v_wb_fbk_diff_arr[:,i], 'rgb'[i]+'.', label='fbk')
-        plt.plot(t_arr, w_v_wm_diff_arr[:,i], 'rgb'[i]+'--', label='moc')
-    plt.xlabel('t (s)')
-    plt.ylabel('V (m/s)')
-    plt.legend()
-    plt.savefig(FIG_DIR_PATH+'vel_{}.{}'.format(idx_exp, FILE_TYPE))
-    if CLOSE: plt.close(fig=fig)
-    
 
     fig = plt.figure('Velocity lever arm'+str(i))
     plt.title('Velocity lever arm\n{}'.format(config))
@@ -624,9 +625,9 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx) in enumerate(i
     fig = plt.figure('Orientation est vs mocap'+str(i))
     plt.title('Orientation est vs mocap\n{}'.format(config))
     for i in range(3):
-        plt.plot(t_arr, o_aa_b_arr[:,i], 'rgb'[i], label='est')
-        plt.plot(t_arr, o_aa_b_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
-        plt.plot(t_arr, w_aa_m_arr[:,i], 'rgb'[i]+'--', label='moc')
+        plt.plot(t_arr, w_aa_m_arr[:,i], 'rgb'[i], label='est')
+        plt.plot(t_arr, w_aa_m_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
+        plt.plot(t_arr, w_aa_m_gtr_arr[:,i], 'rgb'[i]+'--', label='moc')
     plt.xlabel('t (s)')
     plt.ylabel('Q')
     plt.legend()
@@ -638,36 +639,57 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx) in enumerate(i
     #############
     # ERROR plots
     #############
-    fig = plt.figure('Position error and covariances'+str(i))
-    plt.title('Position est vs mocap\n{}'.format(config))
+    title = 'Position error and covariances'
+    fig = plt.figure(title+str(i))
+    plt.suptitle(title+'\n{}'.format(config))
     for k in range(3):
-        plt.subplot(3,1,1+k)
-        plt.plot(t_arr, w_p_wb_arr[:,k] - w_p_wm_arr[:,k], 'b', label='est')
-        plt.plot(t_arr, w_p_wb_fbk_arr[:,k] - w_p_wm_arr[:,k], 'b.', label='fbk')
-        plt.plot(tkf_arr,  envel_p[:,k], 'k', label='cov')
-        plt.plot(tkf_arr, -envel_p[:,k], 'k', label='cov')
+        plt.subplot(3,1,1+k, label='')
+        plt.plot(t_arr, w_p_wm_arr[:,k] - w_p_wm_gtr_arr[:,k], 'm', label='est')
+        plt.plot(t_arr, w_p_wm_fbk_arr[:,k] - w_p_wm_gtr_arr[:,k], 'c.', label='fbk')
+        if COV: 
+            plt.plot(tkf_arr,  envel_p[:,k], 'k', label='cov')
+            plt.plot(tkf_arr, -envel_p[:,k], 'k', label='cov')
         plt.legend()
     plt.savefig(FIG_DIR_PATH+'err_pos_{}.{}'.format(idx_exp, FILE_TYPE))
     if CLOSE: plt.close(fig=fig)
     
-    fig = plt.figure('Velocity error and covariances'+str(i))
-    plt.title('Velocity error and covariances\n{}'.format(config))
+    title = 'Velocity error and covariances'
+    fig = plt.figure(title+str(i))
+    plt.suptitle(title+'\n{}'.format(config))
     for k in range(3):
         plt.subplot(3,1,1+k)
-        plt.plot(t_arr, w_v_wb_arr[:,k] - w_v_wm_arr[:,k], 'b', label='est')
-        plt.plot(t_arr, w_v_wb_fbk_arr[:,k] - w_v_wm_arr[:,k], 'b.', label='fbk')
-        plt.plot(tkf_arr,  envel_v[:,k], 'k', label='cov')
-        plt.plot(tkf_arr, -envel_v[:,k], 'k', label='cov')
+        plt.plot(t_arr, w_v_wm_arr[:,k] - w_v_wm_gtr_arr[:,k], 'm', label='est')
+        plt.plot(t_arr, w_v_wm_fbk_arr[:,k] - w_v_wm_gtr_arr[:,k], 'c.', label='fbk')
+        if COV: 
+            plt.plot(tkf_arr,  envel_v[:,k], 'k', label='cov')
+            plt.plot(tkf_arr, -envel_v[:,k], 'k', label='cov')
         plt.legend()
     plt.savefig(FIG_DIR_PATH+'err_vel_{}.{}'.format(idx_exp, FILE_TYPE))
     if CLOSE: plt.close(fig=fig)
 
+    err_o =     np.array([pin.log(w_T_m.rotation*w_T_m_gtr.rotation.T) for w_T_m, w_T_m_gtr in zip(w_T_m_lst, w_T_m_gtr_lst)])
+    err_o_fbk = np.array([pin.log(w_T_m.rotation*w_T_m_gtr.rotation.T) for w_T_m, w_T_m_gtr in zip(w_T_m_fbk_lst, w_T_m_gtr_lst)])
 
+    title = 'Orientation error and covariances'
+    fig = plt.figure(title+str(i))
+    plt.suptitle(title+'\n{}'.format(config))
+    for k in range(3):
+        plt.subplot(3,1,1+k)
+        plt.plot(t_arr, err_o[:,k], 'm', label='est')
+        plt.plot(t_arr, err_o_fbk[:,k], 'c.', label='fbk')
+        if COV: 
+            plt.plot(tkf_arr,  envel_o[:,k], 'k', label='cov')
+            plt.plot(tkf_arr, -envel_o[:,k], 'k', label='cov')
+        plt.legend()
+    plt.savefig(FIG_DIR_PATH+'err_rot_{}.{}'.format(idx_exp, FILE_TYPE))
+    if CLOSE: plt.close(fig=fig)
 
     ###############
     # FACTOR ERRORS
     ###############
-    fig = plt.figure('Factor IMU err'+str(i))
+    title = 'Factor IMU err'
+    fig = plt.figure(title+str(i))
+    plt.suptitle(title+'\n{}'.format(config))    
     for k in range(3):
         plt.subplot(3,1,1+k)
         plt.title('POV'[k])
@@ -705,7 +727,9 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx) in enumerate(i
     # plt.savefig(FIG_DIR_PATH+'fac_bias_drift_error_{}.{}'.format(idx_exp, FILE_TYPE))
     # if CLOSE: plt.close(fig=fig)
 
-    fig = plt.figure('Factor Pose err'+str(i))
+    title = 'Factor Pose err'
+    fig = plt.figure(title+str(i))
+    plt.suptitle(title+'\n{}'.format(config))    
     for k in range(2):
         plt.subplot(2,1,1+k)
         plt.title('PO'[k])
@@ -718,43 +742,48 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx) in enumerate(i
     ############
     # PARAMETERS
     ############
-    fig = plt.figure('Extrinsics MOCAP'+str(i))
-    plt.title('Extrinsics MOCAP\n{}'.format(config))
+    title = 'Extrinsics MOCAP'
+    fig = plt.figure(title+str(i))
+    plt.suptitle(title+'\n{}'.format(config))    
     plt.subplot(2,1,1)
     plt.title('P')
     for i in range(3):
         plt.plot(t_arr, extr_mocap_fbk[:,i], 'rgb'[i])
-        plt.plot(tkf_arr, extr_mocap_fbk[-1,i]+envel_m[:,i], 'rgb'[i]+'--', label='cov')
-        plt.plot(tkf_arr, extr_mocap_fbk[-1,i]-envel_m[:,i], 'rgb'[i]+'--')
+        if COV: 
+            plt.plot(tkf_arr, extr_mocap_fbk[-1,i]+envel_m[:,i], 'rgb'[i]+'--', label='cov')
+            plt.plot(tkf_arr, extr_mocap_fbk[-1,i]-envel_m[:,i], 'rgb'[i]+'--')
     # plt.xlabel('t (s)')
     plt.ylabel('i_p_im (m)')
     plt.subplot(2,1,2)
     plt.title('O')
     for i in range(3):
         plt.plot(t_arr, extr_mocap_fbk[:,3+i], 'rgb'[i])
-        plt.plot(tkf_arr, extr_mocap_fbk[-1,3+i]+envel_m[:,3+i], 'rgb'[i]+'--', label='cov')
-        plt.plot(tkf_arr, extr_mocap_fbk[-1,3+i]-envel_m[:,3+i], 'rgb'[i]+'--')
+        if COV: 
+            plt.plot(tkf_arr, extr_mocap_fbk[-1,3+i]+envel_m[:,3+i], 'rgb'[i]+'--', label='cov')
+            plt.plot(tkf_arr, extr_mocap_fbk[-1,3+i]-envel_m[:,3+i], 'rgb'[i]+'--')
     # plt.plot(t_arr, extr_mocap_fbk[:,6], 'k')  
     plt.ylabel('i_q_m (rad)')  
     plt.savefig(FIG_DIR_PATH+'extr_mocap_{}.{}'.format(idx_exp, FILE_TYPE))
     if CLOSE: plt.close(fig=fig)
     
-
-    fig = plt.figure('IMU biases'+str(i))
+    title = 'IMU biases'
+    fig = plt.figure(title+str(i))
+    plt.suptitle(title+'\n{}'.format(config))    
     plt.subplot(2,1,1)
-    plt.title('IMU biases\n{}'.format(config))
     for i in range(3):
         plt.plot(t_arr, imu_bias[:,i],     'rgb'[i], label='est')
         plt.plot(t_arr, imu_bias_fbk[:,i], 'rgb'[i]+'.', label='fbk')
-        plt.plot(tkf_arr, imu_bias_fbk[-1,i]+envel_bi[:,i],   'rgb'[i]+'--', label='cov')
-        plt.plot(tkf_arr, imu_bias_fbk[-1,i]-envel_bi[:,i],  'rgb'[i]+'--')
+        if COV: 
+            plt.plot(tkf_arr, imu_bias_fbk[-1,i]+envel_bi[:,i],   'rgb'[i]+'--', label='cov')
+            plt.plot(tkf_arr, imu_bias_fbk[-1,i]-envel_bi[:,i],  'rgb'[i]+'--')
     plt.ylabel('bias acc (m/s^2)')
     plt.subplot(2,1,2)
     for i in range(3):
         plt.plot(t_arr, imu_bias[:,3+i],     'rgb'[i], label='est')
         plt.plot(t_arr, imu_bias_fbk[:,3+i], 'rgb'[i]+'.', label='fbk')
-        plt.plot(tkf_arr, imu_bias_fbk[-1,3+i]+envel_bi[:,3+i],  'rgb'[i]+'--', label='cov')
-        plt.plot(tkf_arr, imu_bias_fbk[-1,3+i]-envel_bi[:,3+i],  'rgb'[i]+'--')
+        if COV: 
+            plt.plot(tkf_arr, imu_bias_fbk[-1,3+i]+envel_bi[:,3+i],  'rgb'[i]+'--', label='cov')
+            plt.plot(tkf_arr, imu_bias_fbk[-1,3+i]-envel_bi[:,3+i],  'rgb'[i]+'--')
     plt.xlabel('t (s)')
     plt.ylabel('bias gyro (rad/s)')
     plt.legend()
@@ -764,48 +793,48 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, alpha_qa_idx) in enumerate(i
 
     
 
-
-
-
-
     #######
-    # DRIFT: influence of windowed optim
+    # EXTRA
     #######
-    # fig = plt.figure()
-    # plt.title('Position Diff\n{}'.format(config))
-    # plt.plot(t_arr, o_p_ob_diff[:,0], 'r')
-    # plt.plot(t_arr, o_p_ob_diff[:,1], 'g')
-    # plt.plot(t_arr, o_p_ob_diff[:,2], 'b')
-    # plt.xlabel('t (s)')
-    # plt.ylabel('P (m)')
-    # plt.savefig(FIG_DIR_PATH+'diff_pos_{}.{}'.format(idx_exp, FILE_TYPE))
-    # if CLOSE: plt.close(fig=fig)
+    omg_norm = np.linalg.norm(arr_dic['i_omg_oi'], axis=1)
 
-    # fig = plt.figure()
-    # plt.title('Velocity Diff\n{}'.format(config))
-    # plt.plot(t_arr, o_v_ob_diff[:,0], 'r')
-    # plt.plot(t_arr, o_v_ob_diff[:,1], 'g')
-    # plt.plot(t_arr, o_v_ob_diff[:,2], 'b')
-    # plt.xlabel('t (s)')
-    # plt.ylabel('V (m/s)')
-    # plt.savefig(FIG_DIR_PATH+'diff_vel_{}.{}'.format(idx_exp, FILE_TYPE))
-    # if CLOSE: plt.close(fig=fig)
+    fig = plt.figure('P jumps = f(omg)')
+    plt.title('P jumps=f(gyro)'+'\n{}'.format(config))
+    for i in range(3):
+        plt.plot(omg_norm, o_p_ob_fbk_diff[:,i], 'rgb'[i]+'.')
+    plt.savefig(FIG_DIR_PATH+'jump_P_fbk_f(gyro){}.{}'.format(idx_exp, FILE_TYPE))
+    if CLOSE: plt.close(fig=fig)
+
+    fig = plt.figure('P jumps = f(t)')
+    plt.title('P jumps=f(t)'+'\n{}'.format(config))
+    for i in range(3):
+        plt.plot(t_arr, o_p_ob_fbk_diff[:,i], 'rgb'[i]+'.')
+    plt.savefig(FIG_DIR_PATH+'jump_P_fbk_f(t){}.{}'.format(idx_exp, FILE_TYPE))
+    if CLOSE: plt.close(fig=fig)
+    
+    fig = plt.figure('V jumps = f(gyro)')
+    plt.title('v jumps=f(gyro)'+'\n{}'.format(config))
+    for i in range(3):
+        plt.plot(omg_norm, o_v_ob_fbk_diff[:,i], 'rgb'[i]+'.')
+    plt.savefig(FIG_DIR_PATH+'jump_V_fbk_f(gyro){}.{}'.format(idx_exp, FILE_TYPE))
+    if CLOSE: plt.close(fig=fig)
+
 
 if SHOW: plt.show()
 
 plt.figure('POS ')
-sns.heatmap(rmse_pos_arr[:,:,0].T, annot=True, linewidths=.5, xticklabels=time_shift_mocap_lst, yticklabels=std_odom3d_est_lst)
+sns.heatmap(rmse_pos_arr[:,:,0].T, annot=True, linewidths=.5, xticklabels=time_shift_mocap_lst, yticklabels=scale_mocap_lst)
 plt.xlabel('max_t_kf')
 plt.ylabel('KF_nb')
 
 plt.figure('VEL')
-sns.heatmap(rmse_vel_arr[:,:,0].T, annot=True, linewidths=.5, xticklabels=time_shift_mocap_lst, yticklabels=std_odom3d_est_lst)
+sns.heatmap(rmse_vel_arr[:,:,0].T, annot=True, linewidths=.5, xticklabels=time_shift_mocap_lst, yticklabels=scale_mocap_lst)
 plt.xlabel('max_t_kf')
 plt.ylabel('KF_nb')
 
 traj_dur = t_arr[-1] - t_arr[0]
 plt.figure('Compute time (% traj T)')
-sns.heatmap(compute_time_arr[:,:,0].T/traj_dur, annot=True, linewidths=.5, xticklabels=time_shift_mocap_lst, yticklabels=std_odom3d_est_lst)
+sns.heatmap(compute_time_arr[:,:,0].T/traj_dur, annot=True, linewidths=.5, xticklabels=time_shift_mocap_lst, yticklabels=scale_mocap_lst)
 plt.xlabel('max_t_kf')
 plt.ylabel('KF_nb')
 

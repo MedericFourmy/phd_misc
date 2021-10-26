@@ -33,13 +33,35 @@ BASE_FOLDER = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/'
 
 data_file = 'IRI_10_21/solo_sin_back_down_rots_pointed_feet_ters_format.npz'
 
+file_path = BASE_FOLDER+data_file
 
 
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/solocontrol/src/quadruped-reactive-walking/scripts/calib_with_mocap.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/solocontrol/src/quadruped-reactive-walking/scripts/calib_with_mocap_still.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/solocontrol/src/quadruped-reactive-walking/scripts/calib_mocap_planck_move_Kp3.npz'
 
-# arr_dic = read_data_file_laas(BASE_FOLDER+data_file, dt)
-arr_dic = np.load(BASE_FOLDER+data_file, dt)
-# arr_dic = shortened_arr_dic(arr_dic, 2000, len(arr_dic['t'])-200)
-# arr_dic = shortened_arr_dic(arr_dic, 5000, 7150)
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/solocontrol/src/quadruped-reactive-walking/scripts/selected_qa.npz'
+
+
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_10_21/solo_calib_Kp3_clean.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_10_21/solo_calib_Kp3_clean_slow.npz'
+
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_10_21/solo_sin_back_down_rots_on_planck.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_10_21/solo_sin_back_down_rots_on_planck_cleaner.npz'
+
+
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/solocontrol/src/quadruped-reactive-walking/scripts/data_2021_10_15_11_02_0.npz'
+
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_10_21/solo_in_air_10s.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_10_21/solo_in_air_1min.npz'
+
+file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground.npz'
+
+
+arr_dic = read_data_file_laas(file_path, dt)
+# arr_dic = np.load(file_path, dt)
+# arr_dic = shortened_arr_dic(arr_dic, 23000, 34000)
+# arr_dic = shortened_arr_dic(arr_dic, 36000, 45800)
 
 t_arr = arr_dic['t']
 
@@ -73,9 +95,11 @@ to_plot = [
     'i_omg_oi',
     'o_rpy_i',
     'w_rpy_m',
+    'w_q_m',
     'w_p_wm',
     'qa',
     'dqa',
+    'tau',
 ]
 
 for key in to_plot:
