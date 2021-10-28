@@ -31,7 +31,7 @@ arr_dic = shortened_arr_dic(arr_dic, S=5000, N=-5000)
 VIEW = False
 robot = load('solo12')
 
-LEGS = ['FL', 'FR', 'HR', 'HL']
+LEGS = ['FL', 'FR', 'HL', 'HR']
 # contact_frame_names = [leg+'_ANKLE' for leg in LEGS]
 contact_frame_names = [leg+'_FOOT' for leg in LEGS]
 contact_ids = [robot.model.getFrameId(leg_name) for leg_name in contact_frame_names]

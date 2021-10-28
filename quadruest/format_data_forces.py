@@ -4,6 +4,7 @@ import pandas as pd
 from numpy.core.defchararray import array
 from scipy import signal
 import pinocchio as pin
+from scipy.ndimage.measurements import label
 from scipy.spatial.transform import Rotation as R
 from scipy.spatial.transform import Slerp
 from matplotlib import pyplot as plt
@@ -116,7 +117,23 @@ def interpolate_mocap(arr_dic):
 # OFFSETS
 # file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_offset_calibration.npz'
 
-file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground_30.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground_30_bis.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground_30_bzzz.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground_30_pybullet.npz'
+
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_pointfeet_half_withstops.npz'
+
+# WALKING TRAJECTORIES
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI.npz'
+file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_bis.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_gait_10_10.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_gait_5_15.npz'
+
+# PLANNED CONTACTS
+arr_plan = np.load('/home/mfourmy/Documents/Phd_LAAS/data/trajs/solo_stamping.npz')
+
 
 # OUT_FILE_NAME = file_path.split('.')[0]+'_calib_format.npz'
 # OUT_FILE_NAME = file_path.split('.')[0]+'_move_format.npz'
@@ -126,7 +143,7 @@ SAVE = '--save' in sys.argv
 if not (SHOW or SAVE):
     raise ValueError('--show or --save!')
 
-THRESH_VIZ = 8
+THRESH_VIZ = 4
 
 
 dt = 1e-3  # discretization timespan
@@ -138,9 +155,13 @@ arr_dic = read_data_file_laas(file_path, dt)
 # ################################
 # # SHORTEN
 # ###############
-# arr_dic = shortened_arr_dic(arr_dic, 7000, 115000)
-# arr_dic = shortened_arr_dic(arr_dic, 10000)
+print(arr_dic['t'].shape)
+print(arr_plan['contacts'].shape)
+arr_dic = shortened_arr_dic(arr_dic, 200)
+contacts = arr_plan['contacts'][203:]
+contacts = contacts.astype('float64')
 # ##################################
+
 
 
 t_arr = arr_dic['t']
@@ -180,17 +201,17 @@ rpy_mocap_arr = np.array([pin.rpy.matrixToRpy(R) for R in w_R_m_arr])
 
 # Now compute the forces using the robot model
 robot = load('solo12')
-######################################
-# apt install problem of example_robot_data
-URDF_NAME = 'solo12.urdf'
-path = '/opt/openrobots/share/example-robot-data/robots/solo_description'
-urdf = path + '/robots/' + URDF_NAME
-srdf = path + '/srdf/solo.srdf'
-robot = pin.RobotWrapper.BuildFromURDF(urdf, path, pin.JointModelFreeFlyer())
-model = robot.model
-data = robot.data
-pin.loadReferenceConfigurations(model, srdf, False)
-######################################
+# ######################################
+# # apt install problem of example_robot_data
+# URDF_NAME = 'solo12.urdf'
+# path = '/opt/openrobots/share/example-robot-data/robots/solo_description'
+# urdf = path + '/robots/' + URDF_NAME
+# srdf = path + '/srdf/solo.srdf'
+# robot = pin.RobotWrapper.BuildFromURDF(urdf, path, pin.JointModelFreeFlyer())
+# model = robot.model
+# data = robot.data
+# pin.loadReferenceConfigurations(model, srdf, False)
+# ######################################
 
 
 robot.model.gravity.linear = np.array([0, 0, -9.806])
@@ -227,8 +248,12 @@ for i in range(N):
     detect_arr[i,:] = (o_forces[:,2] > THRESH_VIZ)
 
 # store forces
+arr_dic['o_forces'] = o_forces_arr
 arr_dic['l_forces'] = l_forces_arr
 # arr_dic['l_forces'] = np.zeros(12)
+
+arr_dic['contacts'] = contacts
+
 
 
 arr_dic['dqa'] = dqa_filt_arr
@@ -245,15 +270,15 @@ m = robot.data.mass[0]
 g = robot.model.gravity
 
 
-# o_forces_sum[:,:] = np.mean(o_forces_sum, axis=0)
+o_forces_sum[:,:] = np.mean(o_forces_sum, axis=0)
 
 
-# plt.figure('o f sum')
-# plt.plot(t_arr, o_forces_sum[:,0], 'r.', markersize=1)
-# plt.plot(t_arr, o_forces_sum[:,1], 'g.', markersize=1)
-# plt.plot(t_arr, o_forces_sum[:,2], 'b.', markersize=1)
-# plt.hlines(0, t_arr[0]-1, t_arr[-1]+1, 'k')
-# plt.hlines(-m*g.linear[2], t_arr[0]-1, t_arr[-1]+1, 'k')
+plt.figure('o f sum')
+plt.plot(t_arr, o_forces_sum[:,0], 'r.', markersize=1)
+plt.plot(t_arr, o_forces_sum[:,1], 'g.', markersize=1)
+plt.plot(t_arr, o_forces_sum[:,2], 'b.', markersize=1)
+plt.hlines(0, t_arr[0]-1, t_arr[-1]+1, 'k')
+plt.hlines(-m*g.linear[2], t_arr[0]-1, t_arr[-1]+1, 'k')
 
 plt.figure('IMU GYR')
 plt.title('Raw IMU gyro measurements')
@@ -334,26 +359,17 @@ plt.legend()
 
 
 
-# plt.figure('o forces for each leg')
-# NL = 4
-# for k in range(NL):
-#     plt.subplot(NL,1,k+1)
-#     # plt.plot(t_arr, o_forces_arr[:,3*k+0], 'r', markersize=1)
-#     # plt.plot(t_arr, o_forces_arr[:,3*k+1], 'g', markersize=1)
-#     plt.plot(t_arr, o_forces_arr[:,3*k+2], 'b', markersize=1)
-#     plt.plot(t_arr, detect_arr[:,k]*THRESH_VIZ, 'k')
-#     plt.plot(t_arr, arr_dic['contactStatus'][:,k]*THRESH_VIZ*0.9, 'r', markersize=1)
+plt.figure('o forces for each leg')
+NL = 4
+for k in range(NL):
+    plt.subplot(NL,1,k+1)
+    plt.title(LEGS[k])
+    # plt.plot(t_arr, o_forces_arr[:,3*k+0], 'r', markersize=1)
+    # plt.plot(t_arr, o_forces_arr[:,3*k+1], 'g', markersize=1)
+    plt.plot(t_arr, o_forces_arr[:,3*k+2], 'b', markersize=1)
+    plt.plot(t_arr, detect_arr[:,k]*THRESH_VIZ, 'k')
+    plt.plot(t_arr, contacts[:,k]*(THRESH_VIZ+0.1), 'r')
 
-# fig, axs = plt.subplots(1,1, figsize=(6,2.2))
-# fig.canvas.set_window_title('Forces solo leg 1')
-# axs.plot(t_arr, o_forces_arr[:,0], 'r.', markersize=1)
-# axs.plot(t_arr, o_forces_arr[:,1], 'g.', markersize=1)
-# axs.plot(t_arr, o_forces_arr[:,2], 'b.', markersize=1)
-# axs.set_xlabel('time [s]')
-# axs.set_ylabel('forces [N]')
-# axs.yaxis.set_label_position("right")
-# axs.grid(True)
-# fig.savefig('forces_solo_1leg.pdf')
 
 if SHOW:
     plt.show()

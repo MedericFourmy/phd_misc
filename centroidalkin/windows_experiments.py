@@ -9,6 +9,7 @@ by varying the sliding window parameters
 import os
 import sys
 import time
+import math
 from pinocchio.deprecated import XYZQUATToSe3
 import yaml
 import shutil
@@ -23,7 +24,7 @@ import seaborn as sns
 import pinocchio as pin
 
 
-SHOW = False
+SHOW = True
 RUN = True
 
 # FILE_TYPE = 'jpg'
@@ -205,12 +206,21 @@ if not os.path.exists(FIG_DIR_PATH):
 # params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_in_air_2min_74_117_format.npz'
 
 
-params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground_30_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground_30_bis_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground_30_bzzz_format.npz'
+
+
+# WALKING TRAJ
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_format.npz'
+params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_bis_format.npz'
+
 
 
 # Choose problem statement according to the data file
 RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_kine'
-# RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_kine_mocap'
+###### RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_kine_mocap'
 # RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_mocap'
 # RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_kine_mocap'
 
@@ -221,13 +231,13 @@ MOCAP_ALIGN = True  # align est traj wrt. mocap
 traj_name = params['data_file_path'].split('/')[-1].split('.npz')[0]
 
 # other main params
-params['unfix_extr_sensor_pose'] = True
+params['unfix_extr_sensor_pose'] = False
 
 
 # Prior (for pbes without mocap)
 params['std_prior_p'] = 0.001
-params['std_prior_o'] = 5
-params['std_prior_v'] = 1
+params['std_prior_o'] = math.radians(90)
+params['std_prior_v'] = 10
 
 
 
@@ -240,6 +250,9 @@ params['std_pose_o_deg'] = 1
 #             -0.00374592352960968, -6.326516868523575e-05, 0.004403909480908183, 0.9999832846781553]
 i_pose_im = [-0.011159771171845226, -0.007321382374722619, -0.0024773021382709696, 
             0.0035047174131140808, 0.004237725032522593, 0.005168197514269616, 0.9999715237829807]  # imu mocap IRI good calib
+i_pose_im = [-0.011159771171845226, -0.007321382374722619, -0.0024773021382709696, 
+            0.0035047174131140808, 0.004237725032522593, 0.005168197514269616, 0.9999715237829807]  # imu mocap IRI good calib
+i_pose_im = [-x for x in i_pose_im]      # TODO WHY ???    
 params['i_p_im'] = i_pose_im[:3]
 params['i_q_m'] = i_pose_im[3:]
 params['std_mocap_extr_p'] = 0.01
@@ -248,15 +261,29 @@ params['std_mocap_extr_o_deg'] = 5
 # IMU MOCAP extr
 m_p_mb = np.array([-0.11872364, -0.0027602,  -0.01272801])
 m_q_b = np.array([0.00698701, 0.00747303, 0.00597298, 0.99992983])
-m_T_b = pin.XYZQUATToSE3(np.concatenate([m_p_mb, m_q_b]))
-b_T_m = m_T_b.inverse()
 params['m_p_mb'] = m_p_mb.tolist() 
 params['m_q_b'] = m_q_b.tolist()
 
 
+m_T_b = pin.XYZQUATToSE3(np.concatenate([m_p_mb, m_q_b]))
+b_T_m = m_T_b.inverse()
+# i_T_m = pin.XYZQUATToSE3(i_pose_im)
+# b_T_i = b_T_m*i_T_m.inverse()
+
+# print('i_T_m:')
+# print('xzy', i_T_m.translation)
+# print('rpy', np.rad2deg(pin.rpy.matrixToRpy(i_T_m.rotation)))
+
+# print('b_T_m:')
+# print('xzy', b_T_m.translation)
+# print('rpy', np.rad2deg(pin.rpy.matrixToRpy(b_T_m.rotation)))
+
+# print('b_T_i:')
+# print('xzy', b_T_i.translation)
+# print('rpy', np.rad2deg(pin.rpy.matrixToRpy(b_T_i.rotation)))
 
 # std kinematic factor
-# params['scale_mocap'] = 0.000001  # m/(s^2 sqrt(Hz))
+params['std_odom3d_est'] = 0.05  # m/(s^2 sqrt(Hz))
 
 
 # IMU params
@@ -269,13 +296,14 @@ params['bias_imu_prior'] = [0]*6
 # params['std_abs_bias_acc'] =  1
 # params['std_abs_bias_gyro'] = 1
 # params['bias_imu_prior'] = [-0.008309301319705645, -0.003781564817763668, -0.00973822192542853, 0.005811674117089268, 0.00584121549049778, -0.0010103139949982967]  # calib traj
-params['std_abs_bias_acc'] =  1e-1
-params['std_abs_bias_gyro'] = 1e-4
+params['std_abs_bias_acc'] =  100
+params['std_abs_bias_gyro'] = 100
 
 params['dt'] = 1e-3  # 1 kHz
 # params['dt'] = 2e-3  # 500 Hz
-# params['max_t'] = 2
-params['max_t'] = 100
+# params['max_t'] = 2.001
+# params['max_t'] = 10.001
+params['max_t'] = 100.001
 
 
 
@@ -294,31 +322,31 @@ std_pose_p = params['std_pose_p']
 std_pose_o_deg = params['std_pose_o_deg']
 
 
-# time_shift_mocap_lst = [-0.015, 0, 0.015]
-# time_shift_mocap_lst = [-0.015] # IRI
-time_shift_mocap_lst = [-0.020,] # IRI 2nd optimal imu+mocap
-# time_shift_mocap_lst = [-0.018, -0.020, -0.022] # IRI
-# time_shift_mocap_lst = [0.0] # LAAS?
-# time_shift_mocap_lst = [1, 5, 10, 20, 50, 100, 1000, 10000]
-# scale_mocap_lst = [10, 1, 0.1, 0.01, 0.001, 0.0001   ]
-# scale_mocap_lst = [0.1, 1, 10]
-scale_mocap_lst = [1]
-# scale_mocap_lst = [1, 10, 100, 1000]
+# time_BAK_shift_mocap_lst = [-0.020,] # IRI 2nd optimal imu+mocap
+i_p_im_lst = [
+    [-0.01, -0.007, -0.0025],
+    # [-0.02, -0.007, -0.0025],
+    # [ 0.00, -0.007, -0.0025],
+    ] # IRI 2nd optimal imu+mocap
+# i_p_im_lst = [-0.020,] # IRI 2nd optimal imu+mocap
+# std_odom3d_est_lst = [0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.3, 0.5]
+# std_odom3d_est_lst = [0.001, 0.01, 0.3]
+std_odom3d_est_lst = [0.01]
 
 
 
 
 
 delta_qa_lst = [
-    12*[0],
-    [ 0.0041, -0.0149, -0.0140, -0.0192, -0.0004, -0.0033,
-      0.0064,  0.0046,  0.0212,  0.0097,  0.0234,  0.0190, ],
-    [-0.0041, 0.0149,    0.0140, 0.0192, 0.0004, 0.0033,
-     -0.0064, -0.0046,  -0.0212,  +0.0097,  -0.0234,  -0.0190, ]
+    12*[0.0],
+    # [ 0.0041, -0.0149, -0.0140, -0.0192, -0.0004, -0.0033,
+    #   0.0064,  0.0046,  0.0212,  0.0097,  0.0234,  0.0190, ],
+    # [-0.0041, 0.0149,    0.0140, 0.0192, 0.0004, 0.0033,
+    #  -0.0064, -0.0046,  -0.0212,  +0.0097,  -0.0234,  -0.0190, ]
 ]
 
-time_shift_mocap_idx_lst = np.arange(len(time_shift_mocap_lst))
-std_odom3d_idx_lst = np.arange(len(scale_mocap_lst))
+i_p_im_idx_lst = np.arange(len(i_p_im_lst))
+std_odom3d_est_idx_lst = np.arange(len(std_odom3d_est_lst))
 delta_qa_idx_lst = np.arange(len(delta_qa_lst))
 
 
@@ -328,34 +356,37 @@ delta_qa_idx_lst = np.arange(len(delta_qa_lst))
 
 
 
-possibs = nb_possibilities([time_shift_mocap_lst, scale_mocap_lst, delta_qa_lst])
+possibs = nb_possibilities([i_p_im_lst, std_odom3d_est_lst, delta_qa_lst])
 print('Combinations to evaluate: ', possibs)
 
 
-RESULTS = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments_results/out.npz'
-params['out_npz_file_path'] = RESULTS
+RESULTS = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments_results/out'
 
-rmse_pos_arr = np.zeros((len(time_shift_mocap_lst), len(scale_mocap_lst), len(delta_qa_lst)))
-rmse_vel_arr = np.zeros((len(time_shift_mocap_lst), len(scale_mocap_lst), len(delta_qa_lst)))
-compute_time_arr = np.zeros((len(time_shift_mocap_lst), len(scale_mocap_lst), len(delta_qa_lst)))
+rmse_pos_arr = np.zeros((len(i_p_im_lst), len(std_odom3d_est_lst), len(delta_qa_lst)))
+rmse_vel_arr = np.zeros((len(i_p_im_lst), len(std_odom3d_est_lst), len(delta_qa_lst)))
+compute_time_arr = np.zeros((len(i_p_im_lst), len(std_odom3d_est_lst), len(delta_qa_lst)))
 
 
 std_pose_p = params['std_pose_p']
 std_pose_o_deg = params['std_pose_o_deg']
 
 
-for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, delta_qa_idx) in enumerate(itertools.product(time_shift_mocap_idx_lst, std_odom3d_idx_lst, delta_qa_idx_lst)):
-    time_shift_mocap = time_shift_mocap_lst[time_shift_mocap_idx]
-    scale_mocap = scale_mocap_lst[std_odom3d_idx]
+for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertools.product(i_p_im_idx_lst, std_odom3d_est_idx_lst, delta_qa_idx_lst)):
+    i_p_im = i_p_im_lst[i_p_im_idx]
+    std_odom3d_est = std_odom3d_est_lst[std_odom3d_est_idx]
     delta_qa = delta_qa_lst[delta_qa_idx]
 
+
+    params['out_npz_file_path'] = RESULTS+str(idx_exp)+'.npz'
+
+
     params['delta_qa'] = delta_qa
-    # params['std_odom3d_est'] = std_odom3d_est
-    params['time_shift_mocap'] = time_shift_mocap
+    params['std_odom3d_est'] = std_odom3d_est
+    params['i_p_im'] = i_p_im
 
     # scale mocap
-    params['std_pose_p'] = scale_mocap*std_pose_p
-    params['std_pose_o_deg'] = scale_mocap*std_pose_o_deg
+    # params['std_pose_p'] = scale_mocap*std_pose_p
+    # params['std_pose_o_deg'] = scale_mocap*std_pose_o_deg
 
     with open(PARAM_FILE, 'w') as fw: yaml.dump(params, fw)
 
@@ -374,26 +405,26 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, delta_qa_idx) in enumerate(i
     # if RUN:  subprocess.run(RUN_FILE, stdout=subprocess.DEVNULL)
     if RUN: subprocess.run(RUN_FILE)
     compute_time = time.time()-t1
-    compute_time_arr[time_shift_mocap_idx, std_odom3d_idx, delta_qa_idx] = compute_time 
+    compute_time_arr[i_p_im_idx, std_odom3d_est_idx, delta_qa_idx] = compute_time 
     print(idx_exp, ':', compute_time)
     
     config = {
-        'time_shift_mocap': time_shift_mocap,
-        'scale_mocap': scale_mocap,
+        'i_p_im': i_p_im,
+        'std_odom3d_est': std_odom3d_est,
         'delta_qa': delta_qa
     }
     with open(FIG_DIR_PATH+'conf_{}.yaml'.format(idx_exp), 'w') as fw: yaml.dump(config, fw)
 
     # load raw results and compute rmses
-    arr_dic = np.load(RESULTS)
+    arr_dic = np.load(params['out_npz_file_path'])
     
     # Common data
-    t_arr =          input_dic['t']
-    w_p_wm_gtr_arr = input_dic['w_p_wm']
-    w_q_m_gtr_arr =  input_dic['w_q_m']
-    w_v_wm_gtr_arr = input_dic['w_v_wm']
-    i_omg_oi_arr =   input_dic['i_omg_oi']
-    qa_arr =         input_dic['qa']
+    t_arr =          arr_dic['t']
+    w_p_wm_gtr_arr = arr_dic['w_p_wm']
+    w_q_m_gtr_arr =  arr_dic['w_q_m']
+    w_v_wm_gtr_arr = arr_dic['w_v_wm']
+    i_omg_oi_arr =   arr_dic['i_omg_oi']
+    qa_arr =         arr_dic['qa']
 
     o_p_ob_arr = arr_dic['o_p_ob']
     o_q_b_arr =  arr_dic['o_q_b']
@@ -413,8 +444,8 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, delta_qa_idx) in enumerate(i
     o_v_ob_diff = diff_shift(o_v_ob_arr)
     o_p_ob_fbk_diff = diff_shift(o_p_ob_fbk_arr)
     o_v_ob_fbk_diff = diff_shift(o_v_ob_fbk_arr)
-    # rmse_pos_arr[time_shift_mocap_idx, std_odom3d_idx, delta_qa_idx] = rmse(o_p_ob_diff).mean()
-    # rmse_vel_arr[time_shift_mocap_idx, std_odom3d_idx, delta_qa_idx] = rmse(o_v_ob_diff).mean()
+    # rmse_pos_arr[i_p_im_idx, std_odom3d_est_idx, delta_qa_idx] = rmse(o_p_ob_diff).mean()
+    # rmse_vel_arr[i_p_im_idx, std_odom3d_est_idx, delta_qa_idx] = rmse(o_v_ob_diff).mean()
     
 
     # biases and extrinsics
@@ -461,9 +492,9 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, delta_qa_idx) in enumerate(i
     w_p_wm_gtr_arr = np.array([w_T_m.translation for w_T_m in w_T_m_gtr_lst]) 
 
     # quaternion as angle axis in world frame
-    w_aa_m_arr =     np.array([pin.log(w_T_m.rotation) for w_T_m in w_T_m_lst]) 
-    w_aa_m_fbk_arr = np.array([pin.log(w_T_m.rotation) for w_T_m in w_T_m_fbk_lst]) 
-    w_aa_m_gtr_arr = np.array([pin.log(w_T_m.rotation) for w_T_m in w_T_m_gtr_lst]) 
+    w_rpy_m_arr =     np.array([pin.rpy.matrixToRpy(w_T_m.rotation) for w_T_m in w_T_m_lst]) 
+    w_rpy_m_fbk_arr = np.array([pin.rpy.matrixToRpy(w_T_m.rotation) for w_T_m in w_T_m_fbk_lst]) 
+    w_rpy_m_gtr_arr = np.array([pin.rpy.matrixToRpy(w_T_m.rotation) for w_T_m in w_T_m_gtr_lst]) 
 
     # Compute velocities in base frame rather than global frame
     m_v_wm_arr =     np.array([w_T_m.rotation.T@w_v_wm for w_T_m, w_v_wm in zip(w_T_m_lst, w_v_wm_arr)])
@@ -579,10 +610,11 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, delta_qa_idx) in enumerate(i
     plt.title('Position est vs mocap\n{}'.format(config))
     for i in range(3):
         plt.plot(t_arr, w_p_wm_arr[:,i], 'rgb'[i], label='est')
-        plt.plot(t_arr, w_p_wm_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
+        plt.plot(t_arr, w_p_wm_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk', markersize=1)
         plt.plot(t_arr, w_p_wm_gtr_arr[:,i], 'rgb'[i]+'--', label='moc')
     plt.xlabel('t (s)')
     plt.ylabel('P (m)')
+    # plt.ylim(0.67, 0.75)
     plt.legend()
     plt.savefig(FIG_DIR_PATH+'pos_{}.{}'.format(idx_exp, FILE_TYPE))
     if CLOSE: plt.close(fig=fig)
@@ -625,9 +657,9 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, delta_qa_idx) in enumerate(i
     fig = plt.figure('Orientation est vs mocap'+str(i))
     plt.title('Orientation est vs mocap\n{}'.format(config))
     for i in range(3):
-        plt.plot(t_arr, w_aa_m_arr[:,i], 'rgb'[i], label='est')
-        plt.plot(t_arr, w_aa_m_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
-        plt.plot(t_arr, w_aa_m_gtr_arr[:,i], 'rgb'[i]+'--', label='moc')
+        plt.plot(t_arr, w_rpy_m_arr[:,i], 'rgb'[i], label='est')
+        plt.plot(t_arr, w_rpy_m_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
+        plt.plot(t_arr, w_rpy_m_gtr_arr[:,i], 'rgb'[i]+'--', label='moc')
     plt.xlabel('t (s)')
     plt.ylabel('Q')
     plt.legend()
@@ -823,18 +855,18 @@ for idx_exp, (time_shift_mocap_idx, std_odom3d_idx, delta_qa_idx) in enumerate(i
 if SHOW: plt.show()
 
 plt.figure('POS ')
-sns.heatmap(rmse_pos_arr[:,:,0].T, annot=True, linewidths=.5, xticklabels=time_shift_mocap_lst, yticklabels=scale_mocap_lst)
+sns.heatmap(rmse_pos_arr[:,:,0].T, annot=True, linewidths=.5, xticklabels=i_p_im_lst, yticklabels=std_odom3d_est_lst)
 plt.xlabel('max_t_kf')
 plt.ylabel('KF_nb')
 
 plt.figure('VEL')
-sns.heatmap(rmse_vel_arr[:,:,0].T, annot=True, linewidths=.5, xticklabels=time_shift_mocap_lst, yticklabels=scale_mocap_lst)
+sns.heatmap(rmse_vel_arr[:,:,0].T, annot=True, linewidths=.5, xticklabels=i_p_im_lst, yticklabels=std_odom3d_est_lst)
 plt.xlabel('max_t_kf')
 plt.ylabel('KF_nb')
 
 traj_dur = t_arr[-1] - t_arr[0]
 plt.figure('Compute time (% traj T)')
-sns.heatmap(compute_time_arr[:,:,0].T/traj_dur, annot=True, linewidths=.5, xticklabels=time_shift_mocap_lst, yticklabels=scale_mocap_lst)
+sns.heatmap(compute_time_arr[:,:,0].T/traj_dur, annot=True, linewidths=.5, xticklabels=i_p_im_lst, yticklabels=std_odom3d_est_lst)
 plt.xlabel('max_t_kf')
 plt.ylabel('KF_nb')
 

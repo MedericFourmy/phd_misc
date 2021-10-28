@@ -6,7 +6,7 @@ from tsid_wrapper import TsidWrapper
 import conf_solo12 as conf
 from traj_logger import TrajLogger
 
-
+SLEEP = False
 TRAJ_NAME = 'solo_sin_back_down_rots_three'
 # TRAJ_NAME = None  # No save
 # if 0 -> trunk task deactivated
@@ -23,25 +23,27 @@ q, v = tsid_solo.q, tsid_solo.v
 
 DT = 30.0  # seconds
 N_SIMULATION = int(DT/conf.dt)
-F = 1/DT  # mvt frequency
+
+freq_p = 1/np.array([5, 5, 5])
+freq_o = 1/np.array([5, 5, 5])
 
 
 # Params for Com trajectory
 # amplitude of com mvt
 # amp        = np.array([-0.01, 0.03, 0.00])                 
 # amp        = np.array([0.02, 0.02, -0.01])  # back, left, down
-amp        = np.array([0.01, 0.0, -0.01])  # back, left, down
+amp        = np.array([0.01, 0.0, -0.02])  # back, left, down
 # amp        = np.array([-0.01, 0.04, 0.03]) 
 # amp        = np.array([0.0, 0.0, 0.0]) 
 offset     = robot.com(data) - amp                         # offset of the measured CoM 
-two_pi_f             = 2*np.pi*F*np.array([2, 2, 2])   # movement frequencies along each axis
+two_pi_f             = 2*np.pi*freq_p       # movement frequencies along each axis
 two_pi_f_amp         = two_pi_f * amp                      # 2π function times amplitude function
 two_pi_f_squared_amp = two_pi_f * two_pi_f_amp             # 2π function times squared amplitude function
 
 # Params for trunk orientation trajectory
 amp_trunk = np.deg2rad(np.array([15, 10, 15]))   # orientation, numbers in degrees
 # amp_trunk = np.deg2rad(np.array([10.0, 10.0, 0.0]))   # orientation, numbers in degrees
-two_pi_f_trunk     = 2*np.pi*F*np.array([2, 2, 2])  # movement frequencies along each axis
+two_pi_f_trunk     = 2*np.pi*freq_o  # movement frequencies along each axis
 R_trunk_init = robot.framePosition(data, tsid_solo.trunk_link_id).rotation
 
 
@@ -77,22 +79,20 @@ for i in range(0, N_SIMULATION):
 
     # integrate one step
     q, v = tsid_solo.integrate_dv_R3SO3(q, v, dv, dt)
-    # q, v = tsid_solo.integrate_dv(q, v, dv, dt)
     t += dt
 
     if (i % conf.PRINT_N) == 0:
         tsid_solo.print_solve_check(sol, t, v, dv)
 
-    if conf.VIEWER_ON and (i % conf.DISPLAY_N) == 0:
+    if SLEEP and conf.VIEWER_ON and (i % conf.DISPLAY_N) == 0:
         time_spent = time.time() - time_start
         if(time_spent < dt*conf.DISPLAY_N): time.sleep(dt*conf.DISPLAY_N-time_spent)
         tsid_solo.update_display(q, t)
         time_start = time.time()
 
-
-if TRAJ_NAME is not None:
+logger.set_data_lst_as_arrays()
+if '--save' in sys.argv:
     logger.store_csv_trajs(TRAJ_NAME, sep=' ', skip_free_flyer=True)
-    # logger.store_mcapi_traj(TRAJ_NAME)
 
 import matplotlib.pyplot as plt
 

@@ -17,8 +17,8 @@ fMax = 500.0                       # maximum normal force
 
 reference_config_q_name = 'standing'
 
-# contact_frame_names = ['HR_FOOT', 'HL_FOOT', 'FR_FOOT', 'FL_FOOT']
-contact_frame_names = ['HR_ANKLE', 'HL_ANKLE', 'FR_ANKLE', 'FL_ANKLE']  # same thing as XX_FOOT but contained in pybullet
+# contact_frame_names = ['FL_FOOT', 'FR_FOOT', 'HL_FOOT', 'HR_FOOT']
+contact_frame_names = ["FL_ANKLE", "FR_ANKLE", "HL_ANKLE", "HR_ANKLE"]  # same thing as XX_FOOT but contained in pybullet
 contact6d = False
 useLocalFrame = True
 contactNormal = np.array([0., 0., 1.])       # direction of the normal to the contact surface

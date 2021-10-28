@@ -87,9 +87,10 @@ class TrajLogger:
                 'q': q_traj,
                 'v': v_traj,
                 'tau_ff': tau_traj,
+                'contacts': contacts_traj,
             }
             np.savez(self.directory+traj_name+'.npz', **d)
-            print(traj_name, '.npz files saved in: ', self.directory)
+            print(traj_name+'.npz files saved in: ', self.directory)
 
         elif file_type =='dat':
 

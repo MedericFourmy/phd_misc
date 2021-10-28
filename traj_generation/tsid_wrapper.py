@@ -248,7 +248,14 @@ class TsidWrapper:
         v[:3] = oRb_int.T@v_int
         return q, v
 
+
+
     def compute_and_solve(self, t, q, v):
+        data = self.invdyn.data()
+        for i_foot, fid in enumerate(self.contact_frame_ids):
+            f_n = data.oMf[fid].rotation[-1,:]  ### normal in local frame
+            self.contacts[i_foot].setContactNormal(f_n)
+
         HQPData = self.invdyn.computeProblemData(t, q, v)
         sol = self.solver.solve(HQPData)
         return sol, HQPData

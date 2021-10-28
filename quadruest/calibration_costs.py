@@ -5,8 +5,10 @@ import matplotlib.pyplot as plt
 
 from collections.abc import Iterable
 
+from scipy.ndimage.measurements import label
 
-WEIGHT_REGU = 1e-2
+
+WEIGHT_REGU = 1e-5
 
 
 
@@ -316,12 +318,14 @@ class CostOffsetNew:
         res = r.fun[:-2].reshape((self.N, 12))
 
         t_arr = np.arange(self.N)
+        plt.figure('Feet residuals')
         for ic in range(4):
-            plt.figure('Res foot '+self.LEGS[ic])
-            pic_res = res[:,3*ic:3*ic+3]
-            for j in range(3):
-                plt.plot(t_arr, pic_res[:,j], 'rgb'[j]+'.')
-    
+            err = np.linalg.norm(res[:,3*ic:3*ic+3], axis=1)
+            plt.plot(t_arr, err, '.', label=self.LEGS[ic], markersize=3)
+        plt.xlabel('Ordered samples')
+        plt.ylabel('Feet residuals norm (m) for each foot')
+        plt.legend()
+
     def print_n_plot_solutions(self, r_lst):
         # enforce a list
         if not isinstance(r_lst, Iterable):
@@ -472,12 +476,14 @@ class CostFlexiNew:
         res = r.fun[:-2].reshape((self.N, 12))
 
         t_arr = np.arange(self.N)
+        plt.figure('Feet residuals')
         for ic in range(4):
-            plt.figure('Res foot '+self.LEGS[ic])
-            pic_res = res[:,3*ic:3*ic+3]
-            for j in range(3):
-                plt.plot(t_arr, pic_res[:,j], 'rgb'[j]+'.')
-    
+            err = np.linalg.norm(res[:,3*ic:3*ic+3], axis=1)
+            plt.plot(t_arr, err, '.', label=self.LEGS[ic], markersize=3)
+        plt.xlabel('Ordered samples')
+        plt.ylabel('Feet residuals norm (m) for each foot')
+        plt.legend()
+
     def print_n_plot_solutions(self, r_lst):
         # enforce a list
         if not isinstance(r_lst, Iterable):
@@ -631,11 +637,14 @@ class CostFlexiOffsetNew:
         res = r.fun[:-2].reshape((self.N, 12))
 
         t_arr = np.arange(self.N)
+        plt.figure('Feet residuals')
         for ic in range(4):
-            plt.figure('Res foot '+self.LEGS[ic])
-            pic_res = res[:,3*ic:3*ic+3]
-            for j in range(3):
-                plt.plot(t_arr, pic_res[:,j], 'rgb'[j]+'.')
+            err = np.linalg.norm(res[:,3*ic:3*ic+3], axis=1)
+            plt.plot(t_arr, err, '.', label=self.LEGS[ic], markersize=3)
+        plt.xlabel('Ordered samples')
+        plt.ylabel('Feet residuals norm (m) for each foot')
+        plt.legend()
+
     
     def print_n_plot_solutions(self, r_lst):
         # enforce a list
@@ -812,12 +821,14 @@ class CostFlexiOffsetFrictionNew:
         res = r.fun[:-2].reshape((self.N, 12))
 
         t_arr = np.arange(self.N)
+        plt.figure('Feet residuals')
         for ic in range(4):
-            plt.figure('Res foot '+self.LEGS[ic])
-            pic_res = res[:,3*ic:3*ic+3]
-            for j in range(3):
-                plt.plot(t_arr, pic_res[:,j], 'rgb'[j]+'.')
-    
+            err = np.linalg.norm(res[:,3*ic:3*ic+3], axis=1)
+            plt.plot(t_arr, err, '.', label=self.LEGS[ic], markersize=3)
+        plt.xlabel('Ordered samples')
+        plt.ylabel('Feet residuals norm (m) for each foot')
+        plt.legend()
+
     def print_n_plot_solutions(self, r_lst):
         # enforce a list
         if not isinstance(r_lst, Iterable):

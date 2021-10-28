@@ -28,7 +28,7 @@ dab_arr_gtr = np.array([
     0.522,
     0.325
 ])
-LEGS = ['FL', 'FR', 'HR', 'HL']
+LEGS = ['FL', 'FR', 'HL', 'HR']
 
 combinations = [
     (0,1),

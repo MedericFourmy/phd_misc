@@ -1,7 +1,7 @@
+import sys
 import time
 import numpy as np
 import pinocchio as pin
-import tsid
 from tsid_wrapper import TsidWrapper
 from traj_logger import TrajLogger
 from scipy.stats import logistic
@@ -10,16 +10,17 @@ from utils import *
 
 import conf_solo12 as conf
 TRAJ_NAME = 'solo_stamping'
+SAVE = '--save' in sys.argv
+SLEEP = '--sleep' in sys.argv
+SHOW = '--show' in sys.argv
 
 # import conf_solo12_nofeet as conf
 # TRAJ_NAME = 'solo_stamping_nofeet'
 
 dt = conf.dt
 
-# tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
 tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
 logger = TrajLogger(tsid_solo.contact_frame_names, directory='/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
-# logger = TrajLogger(tsid_solo.contact_frame_names, directory='temp_traj')
 
 data = tsid_solo.invdyn.data()
 robot = tsid_solo.robot
@@ -110,7 +111,8 @@ while not end_traj:
         new_shift = False
         t_shift = 0
         dist_shift = dist(pos_c, pos_c_goal)
-        ramp_perc = 0.5
+        # ramp_perc = 0.5
+        ramp_perc = 0.0
         dist_max_w_next_ramp = ramp_perc*dist_shift 
         dist_min_w_prev_ramp = (0.6)*dist_shift
 
@@ -207,15 +209,17 @@ while not end_traj:
     if (i % conf.PRINT_N) == 0:
         tsid_solo.print_solve_check(sol, t, v, dv) 
 
-    if conf.VIEWER_ON and (i % conf.DISPLAY_N) == 0:
+    if SLEEP and conf.VIEWER_ON and (i % conf.DISPLAY_N) == 0:
         time_spent = time.time() - time_start
         if(time_spent < dt*conf.DISPLAY_N): time.sleep(dt*conf.DISPLAY_N-time_spent)
         tsid_solo.update_display(q, t)
         time_start = time.time()
 
 
-logger.store_csv_trajs(TRAJ_NAME, sep=' ', skip_free_flyer=True)
-logger.store_mcapi_traj(TRAJ_NAME)
+
+logger.set_data_lst_as_arrays()
+if SAVE:
+    logger.store_csv_trajs(TRAJ_NAME, sep=' ', skip_free_flyer=True)
 
 import matplotlib.pyplot as plt
 
@@ -242,12 +246,6 @@ plt.plot(logger.data_log['t'], logger.data_log['f0'][:,2], label='{}_fz'.format(
 plt.plot(logger.data_log['t'], logger.data_log['f1'][:,2], label='{}_fz'.format(logger.contact_names[1]))
 plt.plot(logger.data_log['t'], logger.data_log['f2'][:,2], label='{}_fz'.format(logger.contact_names[2]))
 plt.plot(logger.data_log['t'], logger.data_log['f3'][:,2], label='{}_fz'.format(logger.contact_names[3]))
-plt.legend()
-plt.subplot(4,1,4)
-plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,0], label='{}_contact'.format(logger.contact_names[0]))
-plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,1], label='{}_contact'.format(logger.contact_names[1]))
-plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,2], label='{}_contact'.format(logger.contact_names[2]))
-plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,3], label='{}_contact'.format(logger.contact_names[3]))
 plt.legend()
 plt.grid()
 
@@ -279,68 +277,25 @@ plt.legend()
 plt.grid()
 
 
-plt.figure('solo stamping configuration position')
-plt.title('solo stamping configuration position')
-plt.subplot(4,1,1)
-plt.plot(logger.data_log['t'], logger.data_log['q'][:,3*0+0], label='{}_q'.format(7+3*0+0))
-plt.plot(logger.data_log['t'], logger.data_log['q'][:,3*0+1], label='{}_q'.format(7+3*0+1))
-plt.plot(logger.data_log['t'], logger.data_log['q'][:,3*0+2], label='{}_q'.format(7+3*0+2))
-plt.legend()
-plt.grid()
-plt.subplot(4,1,2)
-plt.plot(logger.data_log['t'], logger.data_log['q'][:,3*1+0], label='{}_q'.format(7+3*1+0))
-plt.plot(logger.data_log['t'], logger.data_log['q'][:,3*1+1], label='{}_q'.format(7+3*1+1))
-plt.plot(logger.data_log['t'], logger.data_log['q'][:,3*1+2], label='{}_q'.format(7+3*1+2))
-plt.legend()
-plt.grid()
-plt.subplot(4,1,3)
-plt.plot(logger.data_log['t'], logger.data_log['q'][:,3*2+0], label='{}_q'.format(7+3*2+0))
-plt.plot(logger.data_log['t'], logger.data_log['q'][:,3*2+1], label='{}_q'.format(7+3*2+1))
-plt.plot(logger.data_log['t'], logger.data_log['q'][:,3*2+2], label='{}_q'.format(7+3*2+2))
-plt.legend()
-plt.subplot(4,1,4)
-plt.plot(logger.data_log['t'], logger.data_log['q'][:,3*3+0], label='{}_q'.format(7+3*3+0))
-plt.plot(logger.data_log['t'], logger.data_log['q'][:,3*3+1], label='{}_q'.format(7+3*3+1))
-plt.plot(logger.data_log['t'], logger.data_log['q'][:,3*3+2], label='{}_q'.format(7+3*3+2))
-plt.legend()
-plt.grid()
+o_p_ob = logger.data_log['q'][:,:3]
+o_q_b = logger.data_log['q'][:,3:7]
+qa = logger.data_log['q'][:,7:]
 
-plt.figure('solo stamping configuration velocity')
-plt.title('solo stamping configuration velocity')
-plt.subplot(4,1,1)
-plt.plot(logger.data_log['t'], logger.data_log['v'][:,3*0+0], label='{}_v'.format(6+3*0+0))
-plt.plot(logger.data_log['t'], logger.data_log['v'][:,3*0+1], label='{}_v'.format(6+3*0+1))
-plt.plot(logger.data_log['t'], logger.data_log['v'][:,3*0+2], label='{}_v'.format(6+3*0+2))
-plt.legend()
-plt.grid()
-plt.subplot(4,1,2)
-plt.plot(logger.data_log['t'], logger.data_log['v'][:,3*1+0], label='{}_v'.format(6+3*1+0))
-plt.plot(logger.data_log['t'], logger.data_log['v'][:,3*1+1], label='{}_v'.format(6+3*1+1))
-plt.plot(logger.data_log['t'], logger.data_log['v'][:,3*1+2], label='{}_v'.format(6+3*1+2))
-plt.legend()
-plt.grid()
-plt.subplot(4,1,3)
-plt.plot(logger.data_log['t'], logger.data_log['v'][:,3*2+0], label='{}_v'.format(6+3*2+0))
-plt.plot(logger.data_log['t'], logger.data_log['v'][:,3*2+1], label='{}_v'.format(6+3*2+1))
-plt.plot(logger.data_log['t'], logger.data_log['v'][:,3*2+2], label='{}_v'.format(6+3*2+2))
-plt.legend()
-plt.subplot(4,1,4)
-plt.plot(logger.data_log['t'], logger.data_log['v'][:,3*3+0], label='{}_v'.format(6+3*3+0))
-plt.plot(logger.data_log['t'], logger.data_log['v'][:,3*3+1], label='{}_v'.format(6+3*3+1))
-plt.plot(logger.data_log['t'], logger.data_log['v'][:,3*3+2], label='{}_v'.format(6+3*3+2))
-plt.legend()
-plt.grid()
+plt.figure('Robot position')
+plt.title('Robot position')
+for k in range(3):
+    plt.subplot(4,1,1)
+    plt.plot(logger.data_log['t'], o_p_ob[:,k], 'rgb'[k])
 
-w_prev_arr = np.array(w_prev_arr)
-w_next_arr = np.array(w_next_arr)
-x_prev_arr = np.array(x_prev_arr)
-x_next_arr = np.array(x_next_arr)
-
-plt.figure('Feet weights and noral forces')
+plt.figure('Feet contacts and normal forces')
 plt.subplot(2,1,1)
-plt.plot(logger.data_log['t'], w_prev_arr, label='w_prev')
-plt.plot(logger.data_log['t'], w_next_arr, label='w_next')
+plt.title('Contacts')
+plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,0], label='{}_contact'.format(logger.contact_names[0]))
+plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,1], label='{}_contact'.format(logger.contact_names[1]))
+plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,2], label='{}_contact'.format(logger.contact_names[2]))
+plt.plot(logger.data_log['t'], logger.data_log['contacts'][:,3], label='{}_contact'.format(logger.contact_names[3]))
 plt.subplot(2,1,2)
+plt.title('Normal forces (N)')
 plt.plot(logger.data_log['t'], logger.data_log['f0'][:,2], label='{}_fz'.format(logger.contact_names[0]))
 plt.plot(logger.data_log['t'], logger.data_log['f1'][:,2], label='{}_fz'.format(logger.contact_names[1]))
 plt.plot(logger.data_log['t'], logger.data_log['f2'][:,2], label='{}_fz'.format(logger.contact_names[2]))
@@ -354,4 +309,5 @@ plt.plot(logger.data_log['t'], x_next_arr, label='x_next')
 plt.legend()
 
 
-plt.show()
+if SHOW:
+    plt.show()
