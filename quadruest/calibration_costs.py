@@ -618,13 +618,13 @@ class CostFlexiOffsetNew:
             w_M_m = pin.XYZQUATToSE3(np.concatenate([w_p_wm, w_q_m]))
             w_M_b = w_M_m*m_M_b
             q[:7] = pin.SE3ToXYZQUAT(w_M_b)
-            q[7:] = qa + offset +  + alpha*tau
+            q[7:] = qa + offset + alpha*tau
             self.robot.forwardKinematics(q)
 
             for i, cid in enumerate(self.cids):
-                pi = self.robot.framePlacement(q, cid, update_kinematics=True).translation
-                w_p_wl = w_p_wl_lst[i]
-                res[4*3*k+3*i : 4*3*k+3*i + 3] = pi - w_p_wl
+                w_p_wl_pin = self.robot.framePlacement(q, cid, update_kinematics=True).translation
+                # res[4*3*k+3*i : 4*3*k+3*i + 3] = w_p_wl_pin - w_p_wl
+                res[4*3*k+3*i : 4*3*k+3*i + 3] = w_M_ω*w_p_wl_pin - self.ω_p_ωl_arr[i]
 
         # res[-1] = np.sum(nu_b**2)
         # res[-1] = np.sum((nu_b+nu_ω)**2)

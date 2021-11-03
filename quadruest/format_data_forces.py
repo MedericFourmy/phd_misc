@@ -1,16 +1,15 @@
 import sys
 import numpy as np
 import pandas as pd
-from numpy.core.defchararray import array
 from scipy import signal
 import pinocchio as pin
-from scipy.ndimage.measurements import label
 from scipy.spatial.transform import Rotation as R
 from scipy.spatial.transform import Slerp
 from matplotlib import pyplot as plt
-from data_readers import read_data_file_laas, read_data_files_mpi, shortened_arr_dic
+from data_readers import read_data_file_laas, shortened_arr_dic
 from contact_forces_estimator import ContactForcesEstimator
 from example_robot_data import load
+from contact_matrix_utils import reduce_tracks
 
 
 
@@ -127,12 +126,14 @@ def interpolate_mocap(arr_dic):
 
 # WALKING TRAJECTORIES
 # file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI.npz'
-file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_bis.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_bis.npz'
 # file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_gait_10_10.npz'
 # file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_gait_5_15.npz'
+file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_alternate_walk.npz'
 
 # PLANNED CONTACTS
-arr_plan = np.load('/home/mfourmy/Documents/Phd_LAAS/data/trajs/solo_stamping.npz')
+# arr_plan = np.load('/home/mfourmy/Documents/Phd_LAAS/data/trajs/solo_stamping.npz')
+arr_dic_raw = np.load(file_path)
 
 
 # OUT_FILE_NAME = file_path.split('.')[0]+'_calib_format.npz'
@@ -156,11 +157,16 @@ arr_dic = read_data_file_laas(file_path, dt)
 # # SHORTEN
 # ###############
 print(arr_dic['t'].shape)
-print(arr_plan['contacts'].shape)
-arr_dic = shortened_arr_dic(arr_dic, 200)
-contacts = arr_plan['contacts'][203:]
+# arr_dic = shortened_arr_dic(arr_dic, S=200)
+contacts = arr_dic_raw['esti_feet_status']
+# contacts = arr_plan['contacts'][203:]
+# contacts = arr_plan['contacts']
+# contacts = reduce_tracks(contacts, 1000)
 contacts = contacts.astype('float64')
+
 # ##################################
+
+
 
 
 
@@ -363,12 +369,16 @@ plt.figure('o forces for each leg')
 NL = 4
 for k in range(NL):
     plt.subplot(NL,1,k+1)
+    plt.xlim((0,4.1))
+    plt.ylim((-5,20))
     plt.title(LEGS[k])
     # plt.plot(t_arr, o_forces_arr[:,3*k+0], 'r', markersize=1)
     # plt.plot(t_arr, o_forces_arr[:,3*k+1], 'g', markersize=1)
     plt.plot(t_arr, o_forces_arr[:,3*k+2], 'b', markersize=1)
     plt.plot(t_arr, detect_arr[:,k]*THRESH_VIZ, 'k')
     plt.plot(t_arr, contacts[:,k]*(THRESH_VIZ+0.1), 'r')
+
+
 
 
 if SHOW:

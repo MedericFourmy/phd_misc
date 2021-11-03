@@ -159,9 +159,9 @@ class TsidWrapper:
         self.sample_feet_acc = self.nc*[None]
         for i_foot, traj in enumerate(self.traj_feet):
             self.sample_feet[i_foot] = traj.computeNext()
-            self.sample_feet_pos[i_foot] = self.sample_feet[i_foot].pos()
-            self.sample_feet_vel[i_foot] = self.sample_feet[i_foot].vel()
-            self.sample_feet_acc[i_foot] = self.sample_feet[i_foot].acc()
+            self.sample_feet_pos[i_foot] = self.sample_feet[i_foot].value()
+            self.sample_feet_vel[i_foot] = self.sample_feet[i_foot].derivative()
+            self.sample_feet_acc[i_foot] = self.sample_feet[i_foot].second_derivative()
 
         com_ref = robot.com(data)
         self.trajCom = tsid.TrajectoryEuclidianConstant('traj_com', com_ref)
@@ -177,9 +177,9 @@ class TsidWrapper:
         self.trajTrunk = tsid.TrajectorySE3Constant("traj_base_link", self.trunk_ref)
         self.sample_trunk = self.trajTrunk.computeNext()
         pos_trunk = np.hstack([np.zeros(3), R_trunk_init.flatten()])
-        self.sample_trunk.pos()
-        self.sample_trunk.vel(np.zeros(6))
-        self.sample_trunk.acc(np.zeros(6))
+        self.sample_trunk.value()
+        self.sample_trunk.derivative(np.zeros(6))
+        self.sample_trunk.second_derivative(np.zeros(6))
         self.trunkTask.setReference(self.sample_trunk)
 
 
@@ -255,6 +255,7 @@ class TsidWrapper:
         for i_foot, fid in enumerate(self.contact_frame_ids):
             f_n = data.oMf[fid].rotation[-1,:]  ### normal in local frame
             self.contacts[i_foot].setContactNormal(f_n)
+            self.contacts[i_foot].setForceReference(f_n*24.52/4)
 
         HQPData = self.invdyn.computeProblemData(t, q, v)
         sol = self.solver.solve(HQPData)
@@ -288,23 +289,23 @@ class TsidWrapper:
         return self.robot.framePosition(self.invdyn.data(), self.contact_frame_ids[i])
         
     def set_com_ref(self, pos, vel, acc):
-        self.sample_com.pos(pos)
-        self.sample_com.vel(vel)
-        self.sample_com.acc(acc)
+        self.sample_com.value(pos)
+        self.sample_com.derivative(vel)
+        self.sample_com.second_derivative(acc)
         self.comTask.setReference(self.sample_com)
     
     def set_trunk_ref(self, R):
         pos = np.hstack([np.zeros(3), R.flatten()])
-        self.sample_trunk.pos(pos)
+        self.sample_trunk.value(pos)
         self.trunkTask.setReference(self.sample_trunk)
         
     def set_foot_3d_ref(self, pos, vel, acc, i):
         self.sample_feet_pos[i][:3] = pos
         self.sample_feet_vel[i][:3] = vel
         self.sample_feet_acc[i][:3] = acc
-        self.sample_feet[i].pos(self.sample_feet_pos[i])
-        self.sample_feet[i].vel(self.sample_feet_vel[i])
-        self.sample_feet[i].acc(self.sample_feet_acc[i])        
+        self.sample_feet[i].value(self.sample_feet_pos[i])
+        self.sample_feet[i].derivative(self.sample_feet_vel[i])
+        self.sample_feet[i].second_derivative(self.sample_feet_acc[i])        
         self.tasks_tracking_foot[i].setReference(self.sample_feet[i])
 
     def get_3d_pos_vel_acc(self, dv, i):

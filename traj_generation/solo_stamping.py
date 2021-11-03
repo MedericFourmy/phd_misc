@@ -14,9 +14,6 @@ SAVE = '--save' in sys.argv
 SLEEP = '--sleep' in sys.argv
 SHOW = '--show' in sys.argv
 
-# import conf_solo12_nofeet as conf
-# TRAJ_NAME = 'solo_stamping_nofeet'
-
 dt = conf.dt
 
 tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
@@ -95,7 +92,6 @@ while not end_traj:
 
     # update end effector trajectory tasks based on state machine
     if new_shift:
-        print('\n\n\n\nnew shift')
         data = tsid_solo.invdyn.data()
         pos_c = robot.com(data)
         if back_to_origin:
@@ -111,8 +107,8 @@ while not end_traj:
         new_shift = False
         t_shift = 0
         dist_shift = dist(pos_c, pos_c_goal)
-        # ramp_perc = 0.5
-        ramp_perc = 0.0
+        ramp_perc = 0.5
+        # ramp_perc = 0.0
         dist_max_w_next_ramp = ramp_perc*dist_shift 
         dist_min_w_prev_ramp = (0.6)*dist_shift
 
@@ -133,7 +129,7 @@ while not end_traj:
                 x_prev = logistic.cdf(dist_to_goal-dist_min_w_prev_ramp, (dist_shift-dist_min_w_prev_ramp)/2, (dist_shift-dist_min_w_prev_ramp)/18)
                 # w_prev = linear_interp(x_prev, 1, 0, w_forceRef_big_newcontact, conf.w_forceRef)
                 w_prev = conf.w_forceRef
-                tsid_solo.contacts[prev_raised_foot_nb].setRegularizationTaskWeightVector(w_prev*np.ones(3))
+                # tsid_solo.contacts[prev_raised_foot_nb].setRegularizationTaskWeightVector(w_prev*np.ones(3))
 
             # lower le weight of the next foot to raise
             if not back_to_origin and (dist_to_goal <= dist_max_w_next_ramp):
@@ -141,15 +137,13 @@ while not end_traj:
                 # w_next = linear_interp(dist_to_goal, dist_max_w_next_ramp, 0, conf.w_forceRef, w_forceRef_big)
                 #
                 x_next = logistic.cdf(dist_max_w_next_ramp-dist_to_goal, dist_max_w_next_ramp/2, dist_max_w_next_ramp/18)
-                # w_next = linear_interp(x_next, 1, 0, w_forceRef_big, conf.w_forceRef)
+                w_next = linear_interp(x_next, 1, 0, w_forceRef_big, conf.w_forceRef)
                 w_next = conf.w_forceRef
-                tsid_solo.contacts[raised_foot_nb].setRegularizationTaskWeightVector(w_next*np.ones(3))
+                # tsid_solo.contacts[raised_foot_nb].setRegularizationTaskWeightVector(w_next*np.ones(3))
 
             t_shift += dt
         
         else:
-            print('\n\n\n\nfull support else')
-
             full_support = False
             partial_support = True
             t_partial = 0
@@ -168,7 +162,6 @@ while not end_traj:
 
         t_partial += dt
         if t_partial > PARTIAL_SUPPORT_DURATION:
-            print('\n\n\n\npartial support if')
             tsid_solo.add_contact(raised_foot_nb)
             prev_raised_foot_nb = raised_foot_nb
             raised_foot_nb += 1
@@ -219,7 +212,7 @@ while not end_traj:
 
 logger.set_data_lst_as_arrays()
 if SAVE:
-    logger.store_csv_trajs(TRAJ_NAME, sep=' ', skip_free_flyer=True)
+    logger.store_csv_trajs(TRAJ_NAME, sep=' ', skip_free_flyer=False)
 
 import matplotlib.pyplot as plt
 
