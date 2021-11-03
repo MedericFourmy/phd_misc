@@ -1,16 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 
-"""
-Goal: find a satisfying operational point for different trajectories
-by varying the sliding window parameters
-"""
 
 import os
 import sys
 import time
 import math
-from pinocchio.deprecated import XYZQUATToSe3
+from pinocchio.deprecated import jointJacobian
 import yaml
 import shutil
 import numpy as np
@@ -20,7 +16,6 @@ import matplotlib
 matplotlib.rcParams['savefig.dpi'] = 200
 matplotlib.rcParams['figure.dpi'] = 100
 import matplotlib.pyplot as plt
-import seaborn as sns
 import pinocchio as pin
 
 
@@ -32,6 +27,7 @@ FILE_TYPE = 'png'
 # FILE_TYPE = 'pdf'
 CLOSE = not SHOW
 COV = False
+BODYDYNAMICS_PATH = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics'
 
 def nb_possibilities(lst):
     param_nb_lst = [len(l) for l in lst]
@@ -64,21 +60,23 @@ def qv2R(qvec):
 
 
 # executable and param files paths
-PARAM_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/demos/solo_real_estimation.yaml'
-SENSOR_IMU_PARAM_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/demos/sensor_imu_solo12.yaml'
-PROC_IMU_PARAM_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/demos/processor_imu_solo12.yaml'
-TREE_PARAM_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/demos/tree_manager.yaml'
+PARAM_FILE = os.path.join(BODYDYNAMICS_PATH, 'demos/solo_real_estimation.yaml')
+SENSOR_IMU_PARAM_FILE = os.path.join(BODYDYNAMICS_PATH, 'demos/sensor_imu_solo12.yaml')
+PROC_IMU_PARAM_FILE = os.path.join(BODYDYNAMICS_PATH, 'demos/processor_imu_solo12.yaml')
+TREE_PARAM_FILE = os.path.join(BODYDYNAMICS_PATH, 'demos/tree_manager.yaml')
 
 FIG_DIR_PATH = 'figs/window_experiments/'
 
 shutil.rmtree(FIG_DIR_PATH, ignore_errors=True)
 
+params = create_bak_file_and_get_params(PARAM_FILE)
 params_proc_imu = create_bak_file_and_get_params(PROC_IMU_PARAM_FILE)
 params_sensor_imu = create_bak_file_and_get_params(SENSOR_IMU_PARAM_FILE)
-params = create_bak_file_and_get_params(PARAM_FILE)
 params_tree = create_bak_file_and_get_params(TREE_PARAM_FILE)
 
+
 if not os.path.exists(FIG_DIR_PATH):
+    print('Create '+FIG_DIR_PATH+' folder')
     os.makedirs(FIG_DIR_PATH)
 
 # Choose TRAJECTORY directly here
@@ -212,20 +210,23 @@ if not os.path.exists(FIG_DIR_PATH):
 # params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground_30_bzzz_format.npz'
 
 
-# WALKING TRAJ
-# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_format.npz'
-params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_bis_format.npz'
+# WALKING TRAJ (red -> less certainty on contacts)
+params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_red_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_bis_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_bis_red_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_gait_10_10_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_gait_5_15_format.npz'
+
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_alternate_walk_format.npz'
 
 
 
-# Choose problem statement according to the data file
+# Choose problem demo to run
 RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_kine'
 ###### RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_kine_mocap'
 # RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_mocap'
 # RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_kine_mocap'
-
-MOCAP_ALIGN = True  # align est traj wrt. mocap
-
 
 
 traj_name = params['data_file_path'].split('/')[-1].split('.npz')[0]
@@ -234,11 +235,10 @@ traj_name = params['data_file_path'].split('/')[-1].split('.npz')[0]
 params['unfix_extr_sensor_pose'] = False
 
 
-# Prior (for pbes without mocap)
+# Prior (for demos without mocap like solo_imu_kine)
 params['std_prior_p'] = 0.001
 params['std_prior_o'] = math.radians(90)
 params['std_prior_v'] = 10
-
 
 
 # MOCAP
@@ -248,10 +248,8 @@ params['std_pose_o_deg'] = 1
 # i_pose_im = [-0.1163, 0.0, -0.02,  0,0,0,1]  # NOMINAL, solo at laas
 # i_pose_im = [0.11319228351109546, -0.025215545698249846, -0.01638201593610379, 
 #             -0.00374592352960968, -6.326516868523575e-05, 0.004403909480908183, 0.9999832846781553]
-i_pose_im = [-0.011159771171845226, -0.007321382374722619, -0.0024773021382709696, 
-            0.0035047174131140808, 0.004237725032522593, 0.005168197514269616, 0.9999715237829807]  # imu mocap IRI good calib
-i_pose_im = [-0.011159771171845226, -0.007321382374722619, -0.0024773021382709696, 
-            0.0035047174131140808, 0.004237725032522593, 0.005168197514269616, 0.9999715237829807]  # imu mocap IRI good calib
+i_pose_im = [-0.01116, -0.00732, -0.00248, 
+            0.00350, 0.00424, 0.0052, 0.9999]  # imu mocap IRI good calib
 i_pose_im = [-x for x in i_pose_im]      # TODO WHY ???    
 params['i_p_im'] = i_pose_im[:3]
 params['i_q_m'] = i_pose_im[3:]
@@ -267,20 +265,6 @@ params['m_q_b'] = m_q_b.tolist()
 
 m_T_b = pin.XYZQUATToSE3(np.concatenate([m_p_mb, m_q_b]))
 b_T_m = m_T_b.inverse()
-# i_T_m = pin.XYZQUATToSE3(i_pose_im)
-# b_T_i = b_T_m*i_T_m.inverse()
-
-# print('i_T_m:')
-# print('xzy', i_T_m.translation)
-# print('rpy', np.rad2deg(pin.rpy.matrixToRpy(i_T_m.rotation)))
-
-# print('b_T_m:')
-# print('xzy', b_T_m.translation)
-# print('rpy', np.rad2deg(pin.rpy.matrixToRpy(b_T_m.rotation)))
-
-# print('b_T_i:')
-# print('xzy', b_T_i.translation)
-# print('rpy', np.rad2deg(pin.rpy.matrixToRpy(b_T_i.rotation)))
 
 # std kinematic factor
 params['std_odom3d_est'] = 0.05  # m/(s^2 sqrt(Hz))
@@ -295,58 +279,57 @@ params_sensor_imu['motion_variances']['wb_rate_stdev'] = 1e-6    # rad/s/sqrt(s)
 params['bias_imu_prior'] = [0]*6
 # params['std_abs_bias_acc'] =  1
 # params['std_abs_bias_gyro'] = 1
-# params['bias_imu_prior'] = [-0.008309301319705645, -0.003781564817763668, -0.00973822192542853, 0.005811674117089268, 0.00584121549049778, -0.0010103139949982967]  # calib traj
 params['std_abs_bias_acc'] =  100
 params['std_abs_bias_gyro'] = 100
 
 params['dt'] = 1e-3  # 1 kHz
-# params['dt'] = 2e-3  # 500 Hz
-# params['max_t'] = 2.001
+params['max_t'] = 4.0
 # params['max_t'] = 10.001
-params['max_t'] = 100.001
+# params['max_t'] = 30.001
 
 
+# KF management
+params_proc_imu['keyframe_vote']['max_time_span'] = 0.05
+# params_proc_imu['keyframe_vote']['max_time_span'] = 0.1
+# params_proc_imu['keyframe_vote']['max_time_span'] = 0.2
 
-# Load the input data (in case glitch with mocap...)
+params_tree['config']['problem']['tree_manager']['n_frames'] = 5000000000
 
-input_dic = np.load(params['data_file_path'], params['dt'])
+
+# Parameters found by Nicolas on last calibration
+alpha_qa_gold = [-0.12742363, -0.00529146, -0.03104106, -0.14280791, -0.02257373,
+                 -0.04482504, -0.08464646, -0.10036708,  0.00414789, -0.07920959, -0.01540801, -0.04312102]
+delta_qa_gold = [ 0.00397903, -0.00273951,  0.00580113,  0.02760998,  0.01361366,
+                     -0.00809446, -0.00788157, -0.00411362,  0.01018828,  0.01604624, -0.00141011, -0.01212298]
+
+params['delta_qa'] = delta_qa_gold
+params['alpha_qa'] = alpha_qa_gold
 
 
 
 
 ###############################
+# Parameters on which we wish to loop
+# If 
 ###############################
 ###############################
-###############################
-std_pose_p = params['std_pose_p']
-std_pose_o_deg = params['std_pose_o_deg']
-
 
 # time_BAK_shift_mocap_lst = [-0.020,] # IRI 2nd optimal imu+mocap
-i_p_im_lst = [
-    [-0.01, -0.007, -0.0025],
-    # [-0.02, -0.007, -0.0025],
-    # [ 0.00, -0.007, -0.0025],
+alpha_qa_lst = [
+    # 12*[0.0],
+    alpha_qa_gold,
     ] # IRI 2nd optimal imu+mocap
-# i_p_im_lst = [-0.020,] # IRI 2nd optimal imu+mocap
-# std_odom3d_est_lst = [0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.3, 0.5]
-# std_odom3d_est_lst = [0.001, 0.01, 0.3]
-std_odom3d_est_lst = [0.01]
 
-
-
-
+# n_frames_lst = [5, 10, 100, 1000]
+n_frames_lst = [50000]
 
 delta_qa_lst = [
     12*[0.0],
-    # [ 0.0041, -0.0149, -0.0140, -0.0192, -0.0004, -0.0033,
-    #   0.0064,  0.0046,  0.0212,  0.0097,  0.0234,  0.0190, ],
-    # [-0.0041, 0.0149,    0.0140, 0.0192, 0.0004, 0.0033,
-    #  -0.0064, -0.0046,  -0.0212,  +0.0097,  -0.0234,  -0.0190, ]
+    # delta_qa_gold,
 ]
 
-i_p_im_idx_lst = np.arange(len(i_p_im_lst))
-std_odom3d_est_idx_lst = np.arange(len(std_odom3d_est_lst))
+alpha_qa_idx_lst = np.arange(len(alpha_qa_lst))
+n_frames_idx_lst = np.arange(len(n_frames_lst))
 delta_qa_idx_lst = np.arange(len(delta_qa_lst))
 
 
@@ -356,24 +339,24 @@ delta_qa_idx_lst = np.arange(len(delta_qa_lst))
 
 
 
-possibs = nb_possibilities([i_p_im_lst, std_odom3d_est_lst, delta_qa_lst])
+possibs = nb_possibilities([alpha_qa_lst, n_frames_lst, delta_qa_lst])
 print('Combinations to evaluate: ', possibs)
 
 
 RESULTS = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments_results/out'
 
-rmse_pos_arr = np.zeros((len(i_p_im_lst), len(std_odom3d_est_lst), len(delta_qa_lst)))
-rmse_vel_arr = np.zeros((len(i_p_im_lst), len(std_odom3d_est_lst), len(delta_qa_lst)))
-compute_time_arr = np.zeros((len(i_p_im_lst), len(std_odom3d_est_lst), len(delta_qa_lst)))
+rmse_pos_arr = np.zeros((len(alpha_qa_lst), len(n_frames_lst), len(delta_qa_lst)))
+rmse_vel_arr = np.zeros((len(alpha_qa_lst), len(n_frames_lst), len(delta_qa_lst)))
+compute_time_arr = np.zeros((len(alpha_qa_lst), len(n_frames_lst), len(delta_qa_lst)))
 
 
 std_pose_p = params['std_pose_p']
 std_pose_o_deg = params['std_pose_o_deg']
 
 
-for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertools.product(i_p_im_idx_lst, std_odom3d_est_idx_lst, delta_qa_idx_lst)):
-    i_p_im = i_p_im_lst[i_p_im_idx]
-    std_odom3d_est = std_odom3d_est_lst[std_odom3d_est_idx]
+for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.product(alpha_qa_idx_lst, n_frames_idx_lst, delta_qa_idx_lst)):
+    alpha_qa = alpha_qa_lst[alpha_qa_idx]
+    n_frames = n_frames_lst[n_frames_idx]
     delta_qa = delta_qa_lst[delta_qa_idx]
 
 
@@ -381,8 +364,8 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
 
 
     params['delta_qa'] = delta_qa
-    params['std_odom3d_est'] = std_odom3d_est
-    params['i_p_im'] = i_p_im
+    # params['n_frames'] = n_frames
+    params['alpha_qa'] = alpha_qa
 
     # scale mocap
     # params['std_pose_p'] = scale_mocap*std_pose_p
@@ -395,7 +378,7 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     # params_proc_imu['keyframe_vote']['max_time_span'] = max_t_kf
     with open(PROC_IMU_PARAM_FILE, 'w') as fw: yaml.dump(params_proc_imu, fw)
 
-    # params_tree['config']['problem']['tree_manager']['n_frames'] = KF_nb
+    params_tree['config']['problem']['tree_manager']['n_frames'] = n_frames
     with open(TREE_PARAM_FILE, 'w') as fw: yaml.dump(params_tree, fw)
 
 
@@ -405,12 +388,12 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     # if RUN:  subprocess.run(RUN_FILE, stdout=subprocess.DEVNULL)
     if RUN: subprocess.run(RUN_FILE)
     compute_time = time.time()-t1
-    compute_time_arr[i_p_im_idx, std_odom3d_est_idx, delta_qa_idx] = compute_time 
+    compute_time_arr[alpha_qa_idx, n_frames_idx, delta_qa_idx] = compute_time 
     print(idx_exp, ':', compute_time)
     
     config = {
-        'i_p_im': i_p_im,
-        'std_odom3d_est': std_odom3d_est,
+        'alpha_qa': alpha_qa,
+        'n_frames': n_frames,
         'delta_qa': delta_qa
     }
     with open(FIG_DIR_PATH+'conf_{}.yaml'.format(idx_exp), 'w') as fw: yaml.dump(config, fw)
@@ -444,8 +427,8 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     o_v_ob_diff = diff_shift(o_v_ob_arr)
     o_p_ob_fbk_diff = diff_shift(o_p_ob_fbk_arr)
     o_v_ob_fbk_diff = diff_shift(o_v_ob_fbk_arr)
-    # rmse_pos_arr[i_p_im_idx, std_odom3d_est_idx, delta_qa_idx] = rmse(o_p_ob_diff).mean()
-    # rmse_vel_arr[i_p_im_idx, std_odom3d_est_idx, delta_qa_idx] = rmse(o_v_ob_diff).mean()
+    # rmse_pos_arr[alpha_qa_idx, n_frames_idx, delta_qa_idx] = rmse(o_p_ob_diff).mean()
+    # rmse_vel_arr[alpha_qa_idx, n_frames_idx, delta_qa_idx] = rmse(o_v_ob_diff).mean()
     
 
     # biases and extrinsics
@@ -468,10 +451,9 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     ##########################################
     ##########################################
 
-
-    w_T_m_init = w_T_m_gtr_lst[0] if MOCAP_ALIGN else pin.SE3.Identity()
-    o_T_i_init = o_T_i_lst[0] if MOCAP_ALIGN else pin.SE3.Identity()
-    o_T_m_init = o_T_i_init*i_T_m  # align trajectories wrt. local mocap frame
+    w_T_m_init = w_T_m_gtr_lst[0]
+    o_T_i_init = o_T_i_lst[0]
+    o_T_m_init = o_T_i_init*i_T_m
 
     # transform estimated trajectories in mocap GLOBAL frame
     w_T_o = w_T_m_init * o_T_m_init.inverse()
@@ -480,7 +462,7 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     w_T_m_lst =     [w_T_o*o_T_i*i_T_m for o_T_i in o_T_i_lst]
     w_T_m_fbk_lst = [w_T_o*o_T_i*i_T_m for o_T_i in o_T_i_fbk_lst]
 
-    # TODO: velocities...
+    # TODO: velocities -> add omega x lever term
     w_v_wm_arr = np.array([w_T_o.rotation@o_v_ob for o_v_ob in o_v_ob_arr])
     w_v_wm_fbk_arr = np.array([w_T_o.rotation@o_v_ob for o_v_ob in o_v_ob_fbk_arr])
 
@@ -505,7 +487,7 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     m_p_mi = i_T_m.inverse().translation
     i_v_lever_arr = np.array([ np.cross(i_omg_oi-bi, i_T_m.rotation@m_p_mi) for i_omg_oi, bi  in zip(i_omg_oi_arr, imu_bias[:,3:])]) 
 
-    # covariances
+    # Covariances
     Nsig = 2
     tkf_arr = arr_dic['tkf']
     Nkf = len(tkf_arr)
@@ -525,7 +507,8 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     envel_bi = Nsig*np.sqrt(Qbi)
     envel_m =  Nsig*np.sqrt(Qm)
 
-    # bias cov can explode at the beginning
+
+    # bias cov can explode at the beginning -> clip them
     envel_p = np.clip(envel_p, 3*[0], 3*[20])
     envel_v = np.clip(envel_v, 3*[0], 3*[1])
     envel_v = np.clip(envel_v, 3*[0], 3*[2])
@@ -565,48 +548,14 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
 
 
 
-    #########################
-    # Investigate Kine factor
-    #########################
-    from example_robot_data import load
-    robot = load('solo12')
-    N = len(qa_arr)
-    ee_names = ["FL_ANKLE", "FR_ANKLE", "HL_ANKLE", "HR_ANKLE"]
-    ee_ids = [robot.model.getFrameId(ee_name) for ee_name in ee_names]
 
-    err_lst = []
-    N_btw_kf = 200
-    for idx_kf in range(N_btw_kf, N, N_btw_kf):
-        idx_kf_prev = idx_kf - N_btw_kf
-        # q_prev = np.concatenate([o_p_ob_arr[idx_kf_prev,:], o_q_b_arr[idx_kf_prev,:], qa_arr[idx_kf_prev]])
-        q_prev = np.concatenate([o_p_ob_arr[0,:], o_q_b_arr[0,:], qa_arr[0]])
-        q = np.concatenate([o_p_ob_arr[idx_kf,:], o_q_b_arr[idx_kf,:], qa_arr[idx_kf]])
-        o_p_ol_prev = robot.framePlacement(q_prev, ee_ids[0]).translation
-        o_p_ol = robot.framePlacement(q, ee_ids[0]).translation
-        err = o_p_ol_prev - o_p_ol
-        err_lst.append(err)
-
-    err_kin_arr = np.array(err_lst)
-
-    fig = plt.figure('Kin factor error pinocchio'+str(idx_exp))
-    plt.title('Kin factor error pinocchio\n{}'.format(config))
-    for i in range(3):
-        plt.plot(tkf_arr[:-1], err_kin_arr[:,i], 'rgb'[i], label='est')
-    plt.ylim(-0.01, 0.01)
-    plt.xlabel('t (s)')
-    plt.ylabel('P (m)')
-    plt.legend()
-    plt.savefig(FIG_DIR_PATH+'err_kin_{}.{}'.format(idx_exp, FILE_TYPE))
-    if CLOSE: plt.close(fig=fig)
-
-
-    #########################
+    config = '.\n'.join(["{}: {}".format(k, v) for k, v in config.items()])
     
 
     #######################
     # TRAJECTORY EST VS GTR
     #######################
-    fig = plt.figure('Position est vs mocap'+str(i))
+    fig = plt.figure('Position est vs mocap'+str(idx_exp))
     plt.title('Position est vs mocap\n{}'.format(config))
     for i in range(3):
         plt.plot(t_arr, w_p_wm_arr[:,i], 'rgb'[i], label='est')
@@ -614,12 +563,12 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
         plt.plot(t_arr, w_p_wm_gtr_arr[:,i], 'rgb'[i]+'--', label='moc')
     plt.xlabel('t (s)')
     plt.ylabel('P (m)')
-    # plt.ylim(0.67, 0.75)
+    # plt.ylim(0.35, 0.6)
     plt.legend()
     plt.savefig(FIG_DIR_PATH+'pos_{}.{}'.format(idx_exp, FILE_TYPE))
     if CLOSE: plt.close(fig=fig)
 
-    fig = plt.figure('Velocity est vs mocap GLOBAL frame'+str(i))
+    fig = plt.figure('Velocity est vs mocap GLOBAL frame'+str(idx_exp))
     plt.title('Velocity est vs mocap\n{}'.format(config))
     for i in range(3):
         plt.plot(t_arr, w_v_wm_arr[:,i], 'rgb'[i], label='est')
@@ -631,7 +580,7 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     plt.savefig(FIG_DIR_PATH+'vel_{}.{}'.format(idx_exp, FILE_TYPE))
     if CLOSE: plt.close(fig=fig)
 
-    fig = plt.figure('Velocity est vs mocap BASE frame'+str(i))
+    fig = plt.figure('Velocity est vs mocap BASE frame'+str(idx_exp))
     plt.title('Velocity est vs mocap\n{}'.format(config))
     for i in range(3):
         plt.plot(t_arr, m_v_wm_arr[:,i], 'rgb'[i], label='est')
@@ -643,7 +592,7 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     plt.savefig(FIG_DIR_PATH+'vel_{}.{}'.format(idx_exp, FILE_TYPE))
     if CLOSE: plt.close(fig=fig)
 
-    fig = plt.figure('Velocity lever arm'+str(i))
+    fig = plt.figure('Velocity lever arm'+str(idx_exp))
     plt.title('Velocity lever arm\n{}'.format(config))
     for i in range(3):
         plt.plot(t_arr, i_v_lever_arr[:,i], 'rgb'[i], label='est')
@@ -654,7 +603,7 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     if CLOSE: plt.close(fig=fig)
 
 
-    fig = plt.figure('Orientation est vs mocap'+str(i))
+    fig = plt.figure('Orientation est vs mocap'+str(idx_exp))
     plt.title('Orientation est vs mocap\n{}'.format(config))
     for i in range(3):
         plt.plot(t_arr, w_rpy_m_arr[:,i], 'rgb'[i], label='est')
@@ -667,12 +616,11 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     if CLOSE: plt.close(fig=fig)
 
 
-
     #############
     # ERROR plots
     #############
     title = 'Position error and covariances'
-    fig = plt.figure(title+str(i))
+    fig = plt.figure(title+str(idx_exp))
     plt.suptitle(title+'\n{}'.format(config))
     for k in range(3):
         plt.subplot(3,1,1+k, label='')
@@ -686,7 +634,7 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     if CLOSE: plt.close(fig=fig)
     
     title = 'Velocity error and covariances'
-    fig = plt.figure(title+str(i))
+    fig = plt.figure(title+str(idx_exp))
     plt.suptitle(title+'\n{}'.format(config))
     for k in range(3):
         plt.subplot(3,1,1+k)
@@ -703,7 +651,7 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     err_o_fbk = np.array([pin.log(w_T_m.rotation*w_T_m_gtr.rotation.T) for w_T_m, w_T_m_gtr in zip(w_T_m_fbk_lst, w_T_m_gtr_lst)])
 
     title = 'Orientation error and covariances'
-    fig = plt.figure(title+str(i))
+    fig = plt.figure(title+str(idx_exp))
     plt.suptitle(title+'\n{}'.format(config))
     for k in range(3):
         plt.subplot(3,1,1+k)
@@ -720,7 +668,7 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     # FACTOR ERRORS
     ###############
     title = 'Factor IMU err'
-    fig = plt.figure(title+str(i))
+    fig = plt.figure(title+str(idx_exp))
     plt.suptitle(title+'\n{}'.format(config))    
     for k in range(3):
         plt.subplot(3,1,1+k)
@@ -731,36 +679,8 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     plt.savefig(FIG_DIR_PATH+'fac_imu_errors_{}.{}'.format(idx_exp, FILE_TYPE))
     if CLOSE: plt.close(fig=fig)
 
-    # fig = plt.figure('Factor IMU bias res')
-    # plt.subplot(2,1,1)
-    # plt.title('Accelerometer bias res')
-    # plt.plot(t_arr, bias_acc_drift_res[:,0], 'r')
-    # plt.plot(t_arr, bias_acc_drift_res[:,1], 'g')
-    # plt.plot(t_arr, bias_acc_drift_res[:,2], 'b')
-    # plt.subplot(2,1,2)
-    # plt.title('Gyro bias res')
-    # plt.plot(t_arr, bias_gyr_drift_res[:,0], 'r')
-    # plt.plot(t_arr, bias_gyr_drift_res[:,1], 'g')
-    # plt.plot(t_arr, bias_gyr_drift_res[:,2], 'b')
-    # plt.savefig(FIG_DIR_PATH+'fac_bias_drift_res_{}.{}'.format(idx_exp, FILE_TYPE))
-    # if CLOSE: plt.close(fig=fig)
-
-    # fig = plt.figure('Factor IMU bias error')
-    # plt.subplot(2,1,1)
-    # plt.title('Accelerometer bias error')
-    # plt.plot(t_arr, bias_drift_error[:,0], 'r')
-    # plt.plot(t_arr, bias_drift_error[:,1], 'g')
-    # plt.plot(t_arr, bias_drift_error[:,2], 'b')
-    # plt.subplot(2,1,2)
-    # plt.title('Gyro bias error')
-    # plt.plot(t_arr, bias_drift_error[:,0+3], 'r')
-    # plt.plot(t_arr, bias_drift_error[:,1+3], 'g')
-    # plt.plot(t_arr, bias_drift_error[:,2+3], 'b')
-    # plt.savefig(FIG_DIR_PATH+'fac_bias_drift_error_{}.{}'.format(idx_exp, FILE_TYPE))
-    # if CLOSE: plt.close(fig=fig)
-
     title = 'Factor Pose err'
-    fig = plt.figure(title+str(i))
+    fig = plt.figure(title+str(idx_exp))
     plt.suptitle(title+'\n{}'.format(config))    
     for k in range(2):
         plt.subplot(2,1,1+k)
@@ -775,7 +695,7 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     # PARAMETERS
     ############
     title = 'Extrinsics MOCAP'
-    fig = plt.figure(title+str(i))
+    fig = plt.figure(title+str(idx_exp))
     plt.suptitle(title+'\n{}'.format(config))    
     plt.subplot(2,1,1)
     plt.title('P')
@@ -799,7 +719,7 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     if CLOSE: plt.close(fig=fig)
     
     title = 'IMU biases'
-    fig = plt.figure(title+str(i))
+    fig = plt.figure(title+str(idx_exp))
     plt.suptitle(title+'\n{}'.format(config))    
     plt.subplot(2,1,1)
     for i in range(3):
@@ -829,51 +749,34 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     # EXTRA
     #######
     omg_norm = np.linalg.norm(arr_dic['i_omg_oi'], axis=1)
-
-    fig = plt.figure('P jumps = f(omg)')
-    plt.title('P jumps=f(gyro)'+'\n{}'.format(config))
+    title = 'P jumps = f(omg)'
+    fig = plt.figure(title+str(idx_exp))
+    plt.title(title+'\n{}'.format(config))
     for i in range(3):
         plt.plot(omg_norm, o_p_ob_fbk_diff[:,i], 'rgb'[i]+'.')
     plt.savefig(FIG_DIR_PATH+'jump_P_fbk_f(gyro){}.{}'.format(idx_exp, FILE_TYPE))
     if CLOSE: plt.close(fig=fig)
 
-    fig = plt.figure('P jumps = f(t)')
-    plt.title('P jumps=f(t)'+'\n{}'.format(config))
+    title = 'P jumps = f(t)'
+    fig = plt.figure(title+str(idx_exp))
+    plt.title(title+'\n{}'.format(config))
     for i in range(3):
         plt.plot(t_arr, o_p_ob_fbk_diff[:,i], 'rgb'[i]+'.')
     plt.savefig(FIG_DIR_PATH+'jump_P_fbk_f(t){}.{}'.format(idx_exp, FILE_TYPE))
     if CLOSE: plt.close(fig=fig)
-    
-    fig = plt.figure('V jumps = f(gyro)')
-    plt.title('v jumps=f(gyro)'+'\n{}'.format(config))
+
+    title = 'V jumps = f(gyro)'
+    fig = plt.figure(title+str(idx_exp))
+    plt.title(title+'\n{}'.format(config))
     for i in range(3):
         plt.plot(omg_norm, o_v_ob_fbk_diff[:,i], 'rgb'[i]+'.')
     plt.savefig(FIG_DIR_PATH+'jump_V_fbk_f(gyro){}.{}'.format(idx_exp, FILE_TYPE))
     if CLOSE: plt.close(fig=fig)
 
 
-if SHOW: plt.show()
-
-plt.figure('POS ')
-sns.heatmap(rmse_pos_arr[:,:,0].T, annot=True, linewidths=.5, xticklabels=i_p_im_lst, yticklabels=std_odom3d_est_lst)
-plt.xlabel('max_t_kf')
-plt.ylabel('KF_nb')
-
-plt.figure('VEL')
-sns.heatmap(rmse_vel_arr[:,:,0].T, annot=True, linewidths=.5, xticklabels=i_p_im_lst, yticklabels=std_odom3d_est_lst)
-plt.xlabel('max_t_kf')
-plt.ylabel('KF_nb')
-
-traj_dur = t_arr[-1] - t_arr[0]
-plt.figure('Compute time (% traj T)')
-sns.heatmap(compute_time_arr[:,:,0].T/traj_dur, annot=True, linewidths=.5, xticklabels=i_p_im_lst, yticklabels=std_odom3d_est_lst)
-plt.xlabel('max_t_kf')
-plt.ylabel('KF_nb')
-
-
- 
 restore_initial_file(PARAM_FILE)
 restore_initial_file(PROC_IMU_PARAM_FILE)
 restore_initial_file(TREE_PARAM_FILE)
 
 
+if SHOW: plt.show()
