@@ -9,6 +9,8 @@ from scipy.stats import logistic
 from utils import *
 
 import conf_solo12 as conf
+
+TRAJ_DIR = '/home/mfourmy/Documents/Phd_LAAS/data/trajs/'
 TRAJ_NAME = 'solo_stamping'
 SAVE = '--save' in sys.argv
 SLEEP = '--sleep' in sys.argv
@@ -16,8 +18,10 @@ SHOW = '--show' in sys.argv
 
 dt = conf.dt
 
+
+
 tsid_solo = TsidWrapper(conf, viewer=conf.VIEWER_ON)
-logger = TrajLogger(tsid_solo.contact_frame_names, directory='/home/mfourmy/Documents/Phd_LAAS/data/trajs/')
+logger = TrajLogger(tsid_solo.contact_frame_names, directory=TRAJ_DIR)
 
 data = tsid_solo.invdyn.data()
 robot = tsid_solo.robot
@@ -76,10 +80,8 @@ partial_support = False
 putting_foot_down = False
 back_to_origin = False
 
-prev_raised_foot_nb = 0
-raised_foot_nb = 0
-w_forceRef_big = 100000*conf.w_forceRef
-w_forceRef_big_newcontact = 100000*conf.w_forceRef
+prev_raised_foot_idx = 0  # foot previously raised
+raised_foot_idx = 0
 w_prev = conf.w_forceRef
 w_next = conf.w_forceRef
 x_prev = 0
@@ -97,7 +99,7 @@ while not end_traj:
         if back_to_origin:
             pos_c_goal = pos_com_init
         else:    
-            support_feet = compute_other_feet(raised_foot_nb, feet_nb)
+            support_feet = compute_other_feet(raised_foot_idx, feet_nb)
             pos_c_goal = sum(pos_init_lst[i] for i in support_feet)/3
             pos_c_goal[2] = pos_c[2]  # keep z constant?
         
@@ -116,30 +118,19 @@ while not end_traj:
         dist_to_goal = dist(pos_c[:2], pos_c_goal[:2])
         pos_c, vel_c, acc_c = compute_cos_traj(t_shift, amp_com, offset, freq_shift)
 
-        # foot force regularization
+        # foot force regularization when switching contacts
         if t_shift < SHIFT_DURATION:
-            # handle force regularization tasks weights for smooth transitions
-            if (prev_raised_foot_nb != raised_foot_nb) and (dist_to_goal >= dist_min_w_prev_ramp):
-                #
-                # w_prev = logistic.cdf(dist_max_w_next_ramp-dist_to_goal, dist_max_w_next_ramp/2, dist_max_w_next_ramp/20)
-                #
-                # w_prev = linear_interp(dist_to_goal, dist_shift, dist_min_w_prev_ramp, w_forceRef_big, conf.w_forceRef)
-                #
-                # print(dist_to_goal-dist_min_w_prev_ramp, ' / ', dist_min_w_prev_ramp)
-                x_prev = logistic.cdf(dist_to_goal-dist_min_w_prev_ramp, (dist_shift-dist_min_w_prev_ramp)/2, (dist_shift-dist_min_w_prev_ramp)/18)
-                # w_prev = linear_interp(x_prev, 1, 0, w_forceRef_big_newcontact, conf.w_forceRef)
-                w_prev = conf.w_forceRef
-                # tsid_solo.contacts[prev_raised_foot_nb].setRegularizationTaskWeightVector(w_prev*np.ones(3))
 
-            # lower le weight of the next foot to raise
+            # start with big regularization when foot just lands
+            first_time = prev_raised_foot_idx == raised_foot_idx
+            if not first_time and t_shift < 0.5:
+                w_prev = linear_interp(t_shift, 0, 0.5, 10*conf.w_forceRef, conf.w_forceRef)
+                tsid_solo.contacts[prev_raised_foot_idx].setRegularizationTaskWeightVector(w_prev*np.ones(3))
+
+            # when foot about to rise, bigger regularization
             if not back_to_origin and (dist_to_goal <= dist_max_w_next_ramp):
-                #
-                # w_next = linear_interp(dist_to_goal, dist_max_w_next_ramp, 0, conf.w_forceRef, w_forceRef_big)
-                #
-                x_next = logistic.cdf(dist_max_w_next_ramp-dist_to_goal, dist_max_w_next_ramp/2, dist_max_w_next_ramp/18)
-                w_next = linear_interp(x_next, 1, 0, w_forceRef_big, conf.w_forceRef)
-                w_next = conf.w_forceRef
-                # tsid_solo.contacts[raised_foot_nb].setRegularizationTaskWeightVector(w_next*np.ones(3))
+                w_next = linear_interp(t_shift, SHIFT_DURATION-0.5, SHIFT_DURATION, conf.w_forceRef, 1000*conf.w_forceRef)
+                tsid_solo.contacts[raised_foot_idx].setRegularizationTaskWeightVector(w_next*np.ones(3))
 
             t_shift += dt
         
@@ -151,26 +142,26 @@ while not end_traj:
             if back_to_origin:
                 end_traj = True
             else:
-                tsid_solo.remove_contact(raised_foot_nb)
+                tsid_solo.remove_contact(raised_foot_idx)
 
 
     if partial_support and not end_traj:
-        offset = pos_init_lst[raised_foot_nb] - amp_lst[raised_foot_nb]                          
-        pos_f, vel_f, acc_f = compute_cos_traj(t_partial, amp_lst[raised_foot_nb], offset, freq_partial)
+        offset = pos_init_lst[raised_foot_idx] - amp_lst[raised_foot_idx]                          
+        pos_f, vel_f, acc_f = compute_cos_traj(t_partial, amp_lst[raised_foot_idx], offset, freq_partial)
 
-        tsid_solo.set_foot_3d_ref(pos_f, vel_f, acc_f, raised_foot_nb)
+        tsid_solo.set_foot_3d_ref(pos_f, vel_f, acc_f, raised_foot_idx)
 
         t_partial += dt
         if t_partial > PARTIAL_SUPPORT_DURATION:
-            tsid_solo.add_contact(raised_foot_nb)
-            prev_raised_foot_nb = raised_foot_nb
-            raised_foot_nb += 1
+            tsid_solo.add_contact(raised_foot_idx)
+            prev_raised_foot_idx = raised_foot_idx
+            raised_foot_idx += 1
 
             partial_support = False
             new_shift = True
             full_support = True
             
-            if raised_foot_nb > 3:
+            if raised_foot_idx > 3:
                 back_to_origin = True
 
     w_prev_arr.append(w_prev)

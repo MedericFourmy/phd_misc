@@ -21,7 +21,7 @@ def compute_control_torque(qa_d, va_d, tau_d, qa_mes, va_mes):
 
         
 DT = 0.001
-SLEEP = False
+SLEEP = True
 GUION = True
 
 
@@ -29,10 +29,10 @@ robot = load('solo12')
 
 
 # From ContactSequence file
-traj_dir = '/home/mfourmy/Documents/Phd_LAAS/data/trajs/'
-traj_file = 'solo_stamping.npz'
+TRAJ_DIR = '/home/mfourmy/Documents/Phd_LAAS/data/trajs/'
+TRAJ_FILE = 'solo_stamping.npz'
 
-arr = np.load(traj_dir+traj_file)
+arr = np.load(TRAJ_DIR+TRAJ_FILE)
 
 q_arr = arr['q']
 v_arr = arr['v']
