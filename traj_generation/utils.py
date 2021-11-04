@@ -3,15 +3,8 @@ import numpy as np
 def compute_other_feet(fnb, feet_nb):
     return [nb for nb in feet_nb if fnb != nb]
 
-def compute_traj_shift(pos_c, support_feet, shift_duration):
-    pos_c_goal = sum(pos_init_lst[i] for i in support_feet)/3
-    return np.linspace(pos_c[:2], pos_c_goal[:2], int(shift_duration/dt))
-
 def linear_interp(x, xa, xb, ya, yb):
     return ya + (x-xa)*(yb-ya)/(xb-xa)
-
-def log_linear_interp(x, xa, xb, ya, yb):
-    pass
 
 def dist(posa, posb):
     return np.linalg.norm(posa-posb)
