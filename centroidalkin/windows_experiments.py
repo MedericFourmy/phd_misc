@@ -222,6 +222,8 @@ params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_expe
 
 
 
+
+
 # Choose problem demo to run
 RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_kine'
 ###### RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_kine_mocap'
