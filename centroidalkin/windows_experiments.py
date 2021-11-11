@@ -22,9 +22,7 @@ import pinocchio as pin
 SHOW = True
 RUN = True
 
-# FILE_TYPE = 'jpg'
-FILE_TYPE = 'png'
-# FILE_TYPE = 'pdf'
+FILE_TYPES = ['jpg', 'eps']
 CLOSE = not SHOW
 COV = False
 BODYDYNAMICS_PATH = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics'
@@ -58,6 +56,11 @@ def diff_shift(arr):
 def qv2R(qvec):
     return pin.Quaternion(qvec.reshape((4,1))).toRotationMatrix()
 
+def save_figs(fig, name, format_list):
+    for format in format_list:
+        fig.savefig(name+'.{}'.format(format), format=format)
+
+
 
 # executable and param files paths
 PARAM_FILE = os.path.join(BODYDYNAMICS_PATH, 'demos/solo_real_estimation.yaml')
@@ -65,9 +68,6 @@ SENSOR_IMU_PARAM_FILE = os.path.join(BODYDYNAMICS_PATH, 'demos/sensor_imu_solo12
 PROC_IMU_PARAM_FILE = os.path.join(BODYDYNAMICS_PATH, 'demos/processor_imu_solo12.yaml')
 TREE_PARAM_FILE = os.path.join(BODYDYNAMICS_PATH, 'demos/tree_manager.yaml')
 
-FIG_DIR_PATH = 'figs/window_experiments/'
-
-shutil.rmtree(FIG_DIR_PATH, ignore_errors=True)
 
 params = create_bak_file_and_get_params(PARAM_FILE)
 params_proc_imu = create_bak_file_and_get_params(PROC_IMU_PARAM_FILE)
@@ -75,9 +75,7 @@ params_sensor_imu = create_bak_file_and_get_params(SENSOR_IMU_PARAM_FILE)
 params_tree = create_bak_file_and_get_params(TREE_PARAM_FILE)
 
 
-if not os.path.exists(FIG_DIR_PATH):
-    print('Create '+FIG_DIR_PATH+' folder')
-    os.makedirs(FIG_DIR_PATH)
+
 
 # Choose TRAJECTORY directly here
 # params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/solo-estimation/data/SinStamping_Corrected_09_12_2020/data_2020_12_09_17_54_format.npz'  # sin
@@ -210,8 +208,8 @@ if not os.path.exists(FIG_DIR_PATH):
 # params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_sin_back_down_rots_ground_30_bzzz_format.npz'
 
 
-# WALKING TRAJ (red -> less certainty on contacts)
-params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_format.npz'
+# WALKING TRAJ (red -> reduced planned contact meas)
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_format.npz'
 # params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_red_format.npz'
 # params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_bis_format.npz'
 # params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_bis_red_format.npz'
@@ -223,6 +221,16 @@ params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_expe
 
 
 
+# LAAS 11/9: solo walking and trotting, with and without round feet
+
+params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_round_feet_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_walk_round_feet_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_round_feet_with_yaw_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_point_feet_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_point_feet_with_yaw_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_walk_point_feet_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_point_feet_with_yaw_format.npz'
+
 
 # Choose problem demo to run
 RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_kine'
@@ -232,6 +240,23 @@ RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_kine
 
 
 traj_name = params['data_file_path'].split('/')[-1].split('.npz')[0]
+# add a little extra something to the name
+traj_name += '_With_alt005'
+
+FIG_DIR_PATH = 'figs/window_experiments/'+traj_name+'/'
+
+shutil.rmtree(FIG_DIR_PATH, ignore_errors=True)
+
+if not os.path.exists(FIG_DIR_PATH):
+    print('Create '+FIG_DIR_PATH+' folder')
+    os.makedirs(FIG_DIR_PATH)
+
+
+# CERES Solver
+params['max_num_iterations'] = 1000
+params['func_tol'] = 1e-8
+params['compute_cov'] = False
+
 
 # other main params
 params['unfix_extr_sensor_pose'] = False
@@ -269,7 +294,8 @@ m_T_b = pin.XYZQUATToSE3(np.concatenate([m_p_mb, m_q_b]))
 b_T_m = m_T_b.inverse()
 
 # std kinematic factor
-params['std_odom3d_est'] = 0.05  # m/(s^2 sqrt(Hz))
+params['std_foot_nomove'] = 0.05  # m/(s^2 sqrt(Hz))
+params['std_altitude'] = 0.05  # m/(s^2 sqrt(Hz))
 
 
 # IMU params
@@ -285,9 +311,10 @@ params['std_abs_bias_acc'] =  100
 params['std_abs_bias_gyro'] = 100
 
 params['dt'] = 1e-3  # 1 kHz
-params['max_t'] = 4.0
-# params['max_t'] = 10.001
-# params['max_t'] = 30.001
+# params['max_t'] = 1.0
+# params['max_t'] = 20.001
+params['max_t'] = 60.001
+# params['max_t'] = 90.001
 
 
 # KF management
@@ -561,13 +588,13 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
     plt.title('Position est vs mocap\n{}'.format(config))
     for i in range(3):
         plt.plot(t_arr, w_p_wm_arr[:,i], 'rgb'[i], label='est')
-        plt.plot(t_arr, w_p_wm_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk', markersize=1)
+        plt.plot(t_arr, w_p_wm_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk', alpha=0.5, markersize=1)
         plt.plot(t_arr, w_p_wm_gtr_arr[:,i], 'rgb'[i]+'--', label='moc')
     plt.xlabel('t (s)')
     plt.ylabel('P (m)')
-    # plt.ylim(0.35, 0.6)
+    # plt.ylim(0.24, 0.34)
     plt.legend()
-    plt.savefig(FIG_DIR_PATH+'pos_{}.{}'.format(idx_exp, FILE_TYPE))
+    save_figs(fig, FIG_DIR_PATH+'pos_{}'.format(idx_exp), FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
     fig = plt.figure('Velocity est vs mocap GLOBAL frame'+str(idx_exp))
@@ -579,30 +606,30 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
     plt.xlabel('t (s)')
     plt.ylabel('V (m/s)')
     plt.legend()
-    plt.savefig(FIG_DIR_PATH+'vel_{}.{}'.format(idx_exp, FILE_TYPE))
+    save_figs(fig, FIG_DIR_PATH+'vel_{}'.format(idx_exp), FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
-    fig = plt.figure('Velocity est vs mocap BASE frame'+str(idx_exp))
-    plt.title('Velocity est vs mocap\n{}'.format(config))
-    for i in range(3):
-        plt.plot(t_arr, m_v_wm_arr[:,i], 'rgb'[i], label='est')
-        plt.plot(t_arr, m_v_wm_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
-        plt.plot(t_arr, m_v_wm_gtr_arr[:,i], 'rgb'[i]+'--', label='moc')
-    plt.xlabel('t (s)')
-    plt.ylabel('V (m/s)')
-    plt.legend()
-    plt.savefig(FIG_DIR_PATH+'vel_{}.{}'.format(idx_exp, FILE_TYPE))
-    if CLOSE: plt.close(fig=fig)
+    # fig = plt.figure('Velocity est vs mocap BASE frame'+str(idx_exp))
+    # plt.title('Velocity est vs mocap\n{}'.format(config))
+    # for i in range(3):
+    #     plt.plot(t_arr, m_v_wm_arr[:,i], 'rgb'[i], label='est')
+    #     plt.plot(t_arr, m_v_wm_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
+    #     plt.plot(t_arr, m_v_wm_gtr_arr[:,i], 'rgb'[i]+'--', label='moc')
+    # plt.xlabel('t (s)')
+    # plt.ylabel('V (m/s)')
+    # plt.legend()
+    # save_figs(FIG_DIR_PATH+'vel_base_{}'.format(idx_exp), FILE_TYPES)
+    # if CLOSE: plt.close(fig=fig)
 
-    fig = plt.figure('Velocity lever arm'+str(idx_exp))
-    plt.title('Velocity lever arm\n{}'.format(config))
-    for i in range(3):
-        plt.plot(t_arr, i_v_lever_arr[:,i], 'rgb'[i], label='est')
-    plt.xlabel('t (s)')
-    plt.ylabel('V (m/s)')
-    plt.legend()
-    plt.savefig(FIG_DIR_PATH+'vel_{}.{}'.format(idx_exp, FILE_TYPE))
-    if CLOSE: plt.close(fig=fig)
+    # fig = plt.figure('Velocity lever arm'+str(idx_exp))
+    # plt.title('Velocity lever arm\n{}'.format(config))
+    # for i in range(3):
+    #     plt.plot(t_arr, i_v_lever_arr[:,i], 'rgb'[i], label='est')
+    # plt.xlabel('t (s)')
+    # plt.ylabel('V (m/s)')
+    # plt.legend()
+    # save_figs(FIG_DIR_PATH+'vel_lever_{}'.format(idx_exp), FILE_TYPES)
+    # if CLOSE: plt.close(fig=fig)
 
 
     fig = plt.figure('Orientation est vs mocap'+str(idx_exp))
@@ -614,7 +641,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
     plt.xlabel('t (s)')
     plt.ylabel('Q')
     plt.legend()
-    plt.savefig(FIG_DIR_PATH+'vel_{}.{}'.format(idx_exp, FILE_TYPE))
+    save_figs(fig, FIG_DIR_PATH+'orientation_{}'.format(idx_exp), FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
 
@@ -632,7 +659,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
             plt.plot(tkf_arr,  envel_p[:,k], 'k', label='cov')
             plt.plot(tkf_arr, -envel_p[:,k], 'k', label='cov')
         plt.legend()
-    plt.savefig(FIG_DIR_PATH+'err_pos_{}.{}'.format(idx_exp, FILE_TYPE))
+    save_figs(fig, FIG_DIR_PATH+'err_pos_{}'.format(idx_exp), FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
     
     title = 'Velocity error and covariances'
@@ -646,7 +673,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
             plt.plot(tkf_arr,  envel_v[:,k], 'k', label='cov')
             plt.plot(tkf_arr, -envel_v[:,k], 'k', label='cov')
         plt.legend()
-    plt.savefig(FIG_DIR_PATH+'err_vel_{}.{}'.format(idx_exp, FILE_TYPE))
+    save_figs(fig, FIG_DIR_PATH+'err_vel_{}'.format(idx_exp), FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
     err_o =     np.array([pin.log(w_T_m.rotation*w_T_m_gtr.rotation.T) for w_T_m, w_T_m_gtr in zip(w_T_m_lst, w_T_m_gtr_lst)])
@@ -663,7 +690,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
             plt.plot(tkf_arr,  envel_o[:,k], 'k', label='cov')
             plt.plot(tkf_arr, -envel_o[:,k], 'k', label='cov')
         plt.legend()
-    plt.savefig(FIG_DIR_PATH+'err_rot_{}.{}'.format(idx_exp, FILE_TYPE))
+    save_figs(fig, FIG_DIR_PATH+'err_rot_{}'.format(idx_exp), FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
     ###############
@@ -678,7 +705,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
         plt.plot(tkf_arr, fac_imu_err[:,0+3*k], 'r')
         plt.plot(tkf_arr, fac_imu_err[:,1+3*k], 'g')
         plt.plot(tkf_arr, fac_imu_err[:,2+3*k], 'b')
-    plt.savefig(FIG_DIR_PATH+'fac_imu_errors_{}.{}'.format(idx_exp, FILE_TYPE))
+    save_figs(fig, FIG_DIR_PATH+'fac_imu_errors_{}'.format(idx_exp), FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
     title = 'Factor Pose err'
@@ -690,7 +717,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
         plt.plot(tkf_arr, fac_pose_err[:,0+2*k], 'r')
         plt.plot(tkf_arr, fac_pose_err[:,1+2*k], 'g')
         plt.plot(tkf_arr, fac_pose_err[:,2+2*k], 'b')
-    plt.savefig(FIG_DIR_PATH+'fac_pose_errors_{}.{}'.format(idx_exp, FILE_TYPE))
+    save_figs(fig, FIG_DIR_PATH+'fac_pose_errors_{}'.format(idx_exp), FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
     
     ############
@@ -717,7 +744,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
             plt.plot(tkf_arr, extr_mocap_fbk[-1,3+i]-envel_m[:,3+i], 'rgb'[i]+'--')
     # plt.plot(t_arr, extr_mocap_fbk[:,6], 'k')  
     plt.ylabel('i_q_m (rad)')  
-    plt.savefig(FIG_DIR_PATH+'extr_mocap_{}.{}'.format(idx_exp, FILE_TYPE))
+    save_figs(fig, FIG_DIR_PATH+'extr_mocap_{}'.format(idx_exp), FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
     
     title = 'IMU biases'
@@ -741,8 +768,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
     plt.xlabel('t (s)')
     plt.ylabel('bias gyro (rad/s)')
     plt.legend()
-    plt.savefig(FIG_DIR_PATH+'imu_bias_{}.{}'.format(idx_exp, FILE_TYPE))
-    # plt.savefig(FIG_DIR_PATH+'imu_bias_{}.eps'.format(idx_exp, FILE_TYPE), format='eps')
+    save_figs(fig, FIG_DIR_PATH+'imu_bias_{}'.format(idx_exp), FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
     
@@ -750,29 +776,29 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
     #######
     # EXTRA
     #######
-    omg_norm = np.linalg.norm(arr_dic['i_omg_oi'], axis=1)
-    title = 'P jumps = f(omg)'
-    fig = plt.figure(title+str(idx_exp))
-    plt.title(title+'\n{}'.format(config))
-    for i in range(3):
-        plt.plot(omg_norm, o_p_ob_fbk_diff[:,i], 'rgb'[i]+'.')
-    plt.savefig(FIG_DIR_PATH+'jump_P_fbk_f(gyro){}.{}'.format(idx_exp, FILE_TYPE))
-    if CLOSE: plt.close(fig=fig)
+    # omg_norm = np.linalg.norm(arr_dic['i_omg_oi'], axis=1)
+    # title = 'P jumps = f(omg)'
+    # fig = plt.figure(title+str(idx_exp))
+    # plt.title(title+'\n{}'.format(config))
+    # for i in range(3):
+    #     plt.plot(omg_norm, o_p_ob_fbk_diff[:,i], 'rgb'[i]+'.')
+    # save_figs(FIG_DIR_PATH+'jump_P_fbk_f(gyro)_{}'.format(idx_exp), FILE_TYPES)
+    # if CLOSE: plt.close(fig=fig)
 
     title = 'P jumps = f(t)'
     fig = plt.figure(title+str(idx_exp))
     plt.title(title+'\n{}'.format(config))
     for i in range(3):
         plt.plot(t_arr, o_p_ob_fbk_diff[:,i], 'rgb'[i]+'.')
-    plt.savefig(FIG_DIR_PATH+'jump_P_fbk_f(t){}.{}'.format(idx_exp, FILE_TYPE))
+    save_figs(fig, FIG_DIR_PATH+'jump_P_fbk_f(t)_{}'.format(idx_exp), FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
-    title = 'V jumps = f(gyro)'
+    title = 'V jumps = f(t)'
     fig = plt.figure(title+str(idx_exp))
     plt.title(title+'\n{}'.format(config))
     for i in range(3):
-        plt.plot(omg_norm, o_v_ob_fbk_diff[:,i], 'rgb'[i]+'.')
-    plt.savefig(FIG_DIR_PATH+'jump_V_fbk_f(gyro){}.{}'.format(idx_exp, FILE_TYPE))
+        plt.plot(t_arr, o_v_ob_fbk_diff[:,i], 'rgb'[i]+'.')
+    save_figs(fig, FIG_DIR_PATH+'jump_V_fbk_f(t)_{}'.format(idx_exp), FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
 

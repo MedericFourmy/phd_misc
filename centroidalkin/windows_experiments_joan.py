@@ -283,7 +283,7 @@ b_T_m = m_T_b.inverse()
 # print('rpy', np.rad2deg(pin.rpy.matrixToRpy(b_T_i.rotation)))
 
 # std kinematic factor
-params['std_odom3d_est'] = 0.05  # m/(s^2 sqrt(Hz))
+params['std_altitude'] = 0.05  # m/(s^2 sqrt(Hz))
 
 
 # IMU params
@@ -329,9 +329,9 @@ i_p_im_lst = [
     # [ 0.00, -0.007, -0.0025],
     ] # IRI 2nd optimal imu+mocap
 # i_p_im_lst = [-0.020,] # IRI 2nd optimal imu+mocap
-# std_odom3d_est_lst = [0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.3, 0.5]
-# std_odom3d_est_lst = [0.001, 0.01, 0.3]
-std_odom3d_est_lst = [0.01]
+# std_altitude_lst = [0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.3, 0.5]
+# std_altitude_lst = [0.001, 0.01, 0.3]
+std_altitude_lst = [0.01]
 
 
 
@@ -346,7 +346,7 @@ delta_qa_lst = [
 ]
 
 i_p_im_idx_lst = np.arange(len(i_p_im_lst))
-std_odom3d_est_idx_lst = np.arange(len(std_odom3d_est_lst))
+std_altitude_idx_lst = np.arange(len(std_altitude_lst))
 delta_qa_idx_lst = np.arange(len(delta_qa_lst))
 
 
@@ -356,24 +356,24 @@ delta_qa_idx_lst = np.arange(len(delta_qa_lst))
 
 
 
-possibs = nb_possibilities([i_p_im_lst, std_odom3d_est_lst, delta_qa_lst])
+possibs = nb_possibilities([i_p_im_lst, std_altitude_lst, delta_qa_lst])
 print('Combinations to evaluate: ', possibs)
 
 
 RESULTS = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments_results/out'
 
-rmse_pos_arr = np.zeros((len(i_p_im_lst), len(std_odom3d_est_lst), len(delta_qa_lst)))
-rmse_vel_arr = np.zeros((len(i_p_im_lst), len(std_odom3d_est_lst), len(delta_qa_lst)))
-compute_time_arr = np.zeros((len(i_p_im_lst), len(std_odom3d_est_lst), len(delta_qa_lst)))
+rmse_pos_arr = np.zeros((len(i_p_im_lst), len(std_altitude_lst), len(delta_qa_lst)))
+rmse_vel_arr = np.zeros((len(i_p_im_lst), len(std_altitude_lst), len(delta_qa_lst)))
+compute_time_arr = np.zeros((len(i_p_im_lst), len(std_altitude_lst), len(delta_qa_lst)))
 
 
 std_pose_p = params['std_pose_p']
 std_pose_o_deg = params['std_pose_o_deg']
 
 
-for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertools.product(i_p_im_idx_lst, std_odom3d_est_idx_lst, delta_qa_idx_lst)):
+for idx_exp, (i_p_im_idx, std_altitude_idx, delta_qa_idx) in enumerate(itertools.product(i_p_im_idx_lst, std_altitude_idx_lst, delta_qa_idx_lst)):
     i_p_im = i_p_im_lst[i_p_im_idx]
-    std_odom3d_est = std_odom3d_est_lst[std_odom3d_est_idx]
+    std_altitude = std_altitude_lst[std_altitude_idx]
     delta_qa = delta_qa_lst[delta_qa_idx]
 
 
@@ -381,7 +381,7 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
 
 
     params['delta_qa'] = delta_qa
-    params['std_odom3d_est'] = std_odom3d_est
+    params['std_altitude'] = std_altitude
     params['i_p_im'] = i_p_im
 
     # scale mocap
@@ -405,12 +405,12 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     # if RUN:  subprocess.run(RUN_FILE, stdout=subprocess.DEVNULL)
     if RUN: subprocess.run(RUN_FILE)
     compute_time = time.time()-t1
-    compute_time_arr[i_p_im_idx, std_odom3d_est_idx, delta_qa_idx] = compute_time 
+    compute_time_arr[i_p_im_idx, std_altitude_idx, delta_qa_idx] = compute_time 
     print(idx_exp, ':', compute_time)
     
     config = {
         'i_p_im': i_p_im,
-        'std_odom3d_est': std_odom3d_est,
+        'std_altitude': std_altitude,
         'delta_qa': delta_qa
     }
     with open(FIG_DIR_PATH+'conf_{}.yaml'.format(idx_exp), 'w') as fw: yaml.dump(config, fw)
@@ -444,8 +444,8 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
     o_v_ob_diff = diff_shift(o_v_ob_arr)
     o_p_ob_fbk_diff = diff_shift(o_p_ob_fbk_arr)
     o_v_ob_fbk_diff = diff_shift(o_v_ob_fbk_arr)
-    # rmse_pos_arr[i_p_im_idx, std_odom3d_est_idx, delta_qa_idx] = rmse(o_p_ob_diff).mean()
-    # rmse_vel_arr[i_p_im_idx, std_odom3d_est_idx, delta_qa_idx] = rmse(o_v_ob_diff).mean()
+    # rmse_pos_arr[i_p_im_idx, std_altitude_idx, delta_qa_idx] = rmse(o_p_ob_diff).mean()
+    # rmse_vel_arr[i_p_im_idx, std_altitude_idx, delta_qa_idx] = rmse(o_v_ob_diff).mean()
     
 
     # biases and extrinsics
@@ -855,18 +855,18 @@ for idx_exp, (i_p_im_idx, std_odom3d_est_idx, delta_qa_idx) in enumerate(itertoo
 if SHOW: plt.show()
 
 plt.figure('POS ')
-sns.heatmap(rmse_pos_arr[:,:,0].T, annot=True, linewidths=.5, xticklabels=i_p_im_lst, yticklabels=std_odom3d_est_lst)
+sns.heatmap(rmse_pos_arr[:,:,0].T, annot=True, linewidths=.5, xticklabels=i_p_im_lst, yticklabels=std_altitude_lst)
 plt.xlabel('max_t_kf')
 plt.ylabel('KF_nb')
 
 plt.figure('VEL')
-sns.heatmap(rmse_vel_arr[:,:,0].T, annot=True, linewidths=.5, xticklabels=i_p_im_lst, yticklabels=std_odom3d_est_lst)
+sns.heatmap(rmse_vel_arr[:,:,0].T, annot=True, linewidths=.5, xticklabels=i_p_im_lst, yticklabels=std_altitude_lst)
 plt.xlabel('max_t_kf')
 plt.ylabel('KF_nb')
 
 traj_dur = t_arr[-1] - t_arr[0]
 plt.figure('Compute time (% traj T)')
-sns.heatmap(compute_time_arr[:,:,0].T/traj_dur, annot=True, linewidths=.5, xticklabels=i_p_im_lst, yticklabels=std_odom3d_est_lst)
+sns.heatmap(compute_time_arr[:,:,0].T/traj_dur, annot=True, linewidths=.5, xticklabels=i_p_im_lst, yticklabels=std_altitude_lst)
 plt.xlabel('max_t_kf')
 plt.ylabel('KF_nb')
 

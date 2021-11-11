@@ -140,6 +140,11 @@ def read_data_file_laas(file_path, dt):
 
     if 'contactStatus' in data:
         arr_dic['contactStatus'] = data['contactStatus']
+    if 'esti_filt_lin_vel' in data:
+        # complementary filter output
+        arr_dic['esti_q_filt'] = data['esti_q_filt']
+        arr_dic['esti_filt_lin_vel'] = data['esti_filt_lin_vel']
+
 
     return arr_dic
 

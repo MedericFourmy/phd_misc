@@ -129,7 +129,19 @@ def interpolate_mocap(arr_dic):
 # file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_stamping_IRI_bis.npz'
 # file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_gait_10_10.npz'
 # file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_gait_5_15.npz'
-file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_alternate_walk.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/IRI_10_21_2nd/solo_alternate_walk.npz'
+
+
+# LAAS_21_11_09
+# 
+
+file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_round_feet.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_walk_round_feet.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_round_feet_with_yaw.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_point_feet.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_point_feet_with_yaw.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_walk_point_feet.npz'
+# file_path = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_point_feet_with_yaw.npz'
 
 # PLANNED CONTACTS
 # arr_plan = np.load('/home/mfourmy/Documents/Phd_LAAS/data/trajs/solo_stamping.npz')
@@ -369,7 +381,7 @@ plt.figure('o forces for each leg')
 NL = 4
 for k in range(NL):
     plt.subplot(NL,1,k+1)
-    plt.xlim((0,4.1))
+    plt.xlim((18,19))
     plt.ylim((-5,20))
     plt.title(LEGS[k])
     # plt.plot(t_arr, o_forces_arr[:,3*k+0], 'r', markersize=1)
