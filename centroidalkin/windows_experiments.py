@@ -2,6 +2,25 @@
 # coding: utf-8
 
 
+"""
+Notations follow (mostly): http://paulfurgale.info/news/2014/6/9/representing-robot-pose-the-good-the-bad-and-the-ugly
+
+Frames:
+o = global frame of the wolf estimate (defined by the first frame often)
+w = global frame of the mocap
+ω = global frame of the complementary filter
+i = imu
+b = base (root of kinematics)
+m = mocap frame attached to the robot which pose is given in w  
+
+Examples and different estimates provenances
+o_p_oi = wolf a posterio estimate of the position of the imu  
+o_p_oi_fbk = wolf online estimate of the position of the imu
+w_p_wm_gtr = mocap position measurement
+ω_T_b = pose esitmated by the complementary filter running on solo
+"""
+
+
 import os
 import sys
 import time
@@ -240,8 +259,9 @@ RUN_FILE = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics/bin/solo_imu_kine
 
 
 traj_name = params['data_file_path'].split('/')[-1].split('.npz')[0]
-# add a little extra something to the name
-traj_name += '_With_alt005'
+# add a lil' extra something for each expe
+# traj_name += '_With_alt005'
+traj_name += '_test'
 
 FIG_DIR_PATH = 'figs/window_experiments/'+traj_name+'/'
 
@@ -383,6 +403,19 @@ std_pose_p = params['std_pose_p']
 std_pose_o_deg = params['std_pose_o_deg']
 
 
+
+# Recover some stuff from the original data file
+# traj_name += '_With_alt005'
+
+# sys.path.append(os.path.join(os.getcwd(), '../quadruest') )
+# from data_readers import shortened_arr_dic
+
+
+data_dic = np.load(params['data_file_path'])
+ω_T_b_lst = [pin.XYZQUATToSE3(ω_xyzquat_b) for ω_xyzquat_b in data_dic['esti_q_filt'][:,:7]]
+b_v_ωb_cpf_arr = data_dic['esti_filt_lin_vel']
+
+
 for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.product(alpha_qa_idx_lst, n_frames_idx_lst, delta_qa_idx_lst)):
     alpha_qa = alpha_qa_lst[alpha_qa_idx]
     n_frames = n_frames_lst[n_frames_idx]
@@ -428,29 +461,33 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
     with open(FIG_DIR_PATH+'conf_{}.yaml'.format(idx_exp), 'w') as fw: yaml.dump(config, fw)
 
     # load raw results and compute rmses
-    arr_dic = np.load(params['out_npz_file_path'])
-    
+    res_dic = np.load(params['out_npz_file_path'])
+    t_arr =          res_dic['t']
+
+    # shorten stuff from original dataset
+    ω_T_b_lst = ω_T_b_lst[:t_arr.shape[0]]
+    b_v_ωb_cpf_arr = b_v_ωb_cpf_arr[:t_arr.shape[0],:]
+
     # Common data
-    t_arr =          arr_dic['t']
-    w_p_wm_gtr_arr = arr_dic['w_p_wm']
-    w_q_m_gtr_arr =  arr_dic['w_q_m']
-    w_v_wm_gtr_arr = arr_dic['w_v_wm']
-    i_omg_oi_arr =   arr_dic['i_omg_oi']
-    qa_arr =         arr_dic['qa']
+    w_p_wm_gtr_arr = res_dic['w_p_wm']
+    w_q_m_gtr_arr =  res_dic['w_q_m']
+    w_v_wm_gtr_arr = res_dic['w_v_wm']
+    i_omg_oi_arr =   res_dic['i_omg_oi']
+    qa_arr =         res_dic['qa']
 
-    o_p_ob_arr = arr_dic['o_p_ob']
-    o_q_b_arr =  arr_dic['o_q_b']
-    o_v_ob_arr = arr_dic['o_v_ob']
-    o_p_oi_arr = arr_dic['o_p_oi']
-    o_q_i_arr =  arr_dic['o_q_i']
-    o_v_oi_arr = arr_dic['o_v_oi']
+    o_p_ob_arr = res_dic['o_p_ob']
+    o_q_b_arr =  res_dic['o_q_b']
+    o_v_ob_arr = res_dic['o_v_ob']
+    o_p_oi_arr = res_dic['o_p_oi']
+    o_q_i_arr =  res_dic['o_q_i']
+    o_v_oi_arr = res_dic['o_v_oi']
 
-    o_p_ob_fbk_arr = arr_dic['o_p_ob_fbk']
-    o_q_b_fbk_arr =  arr_dic['o_q_b_fbk']
-    o_v_ob_fbk_arr = arr_dic['o_v_ob_fbk']
-    o_p_oi_fbk_arr = arr_dic['o_p_oi_fbk']
-    o_q_i_fbk_arr =  arr_dic['o_q_i_fbk']
-    o_v_oi_fbk_arr = arr_dic['o_v_oi_fbk']
+    o_p_ob_fbk_arr = res_dic['o_p_ob_fbk']
+    o_q_b_fbk_arr =  res_dic['o_q_b_fbk']
+    o_v_ob_fbk_arr = res_dic['o_v_ob_fbk']
+    o_p_oi_fbk_arr = res_dic['o_p_oi_fbk']
+    o_q_i_fbk_arr =  res_dic['o_q_i_fbk']
+    o_v_oi_fbk_arr = res_dic['o_v_oi_fbk']
 
     o_p_ob_diff = diff_shift(o_p_ob_arr)
     o_v_ob_diff = diff_shift(o_v_ob_arr)
@@ -461,10 +498,15 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
     
 
     # biases and extrinsics
-    imu_bias = arr_dic['imu_bias']
-    imu_bias_fbk = arr_dic['imu_bias_fbk']
-    extr_mocap_fbk = arr_dic['i_pose_im_fbk']
+    imu_bias = res_dic['imu_bias']
+    imu_bias_fbk = res_dic['imu_bias_fbk']
+    extr_mocap_fbk = res_dic['i_pose_im_fbk']
     i_T_m = pin.XYZQUATToSE3(extr_mocap_fbk[-1,:])
+
+    i_pose_im_end = extr_mocap_fbk[-1,:]
+    i_T_b = pin.XYZQUATToSE3(i_pose_im_end)
+    b_T_i = i_T_b.inverse()
+    i_pose_im = pin.SE3ToXYZQUAT(b_T_i)
 
     # SE3
     o_T_i_lst = [pin.XYZQUATToSE3(np.concatenate([o_p_oi, o_q_i])) for o_p_oi, o_q_i in zip(o_p_oi_arr, o_q_i_arr)]
@@ -481,19 +523,18 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
     ##########################################
 
     w_T_m_init = w_T_m_gtr_lst[0]
-    o_T_i_init = o_T_i_lst[0]
-    o_T_m_init = o_T_i_init*i_T_m
+    o_T_m_init = o_T_i_lst[0]*i_T_m
+    ω_T_m_init = ω_T_b_lst[0]*b_T_m
 
     # transform estimated trajectories in mocap GLOBAL frame
     w_T_o = w_T_m_init * o_T_m_init.inverse()
+    w_T_ω = w_T_m_init * ω_T_m_init.inverse()
 
     # w_T_m = w_T_o*o_T_i*i_T_m -> quantity to compare with direct mocap measurements  
     w_T_m_lst =     [w_T_o*o_T_i*i_T_m for o_T_i in o_T_i_lst]
     w_T_m_fbk_lst = [w_T_o*o_T_i*i_T_m for o_T_i in o_T_i_fbk_lst]
+    w_T_m_cpf_lst = [w_T_ω*ω_T_b*b_T_m for ω_T_b in ω_T_b_lst]
 
-    # TODO: velocities -> add omega x lever term
-    w_v_wm_arr = np.array([w_T_o.rotation@o_v_ob for o_v_ob in o_v_ob_arr])
-    w_v_wm_fbk_arr = np.array([w_T_o.rotation@o_v_ob for o_v_ob in o_v_ob_fbk_arr])
 
 
     ###################################################
@@ -501,35 +542,47 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
     w_p_wm_arr =     np.array([w_T_m.translation for w_T_m in w_T_m_lst]) 
     w_p_wm_fbk_arr = np.array([w_T_m.translation for w_T_m in w_T_m_fbk_lst]) 
     w_p_wm_gtr_arr = np.array([w_T_m.translation for w_T_m in w_T_m_gtr_lst]) 
+    w_p_wm_cpf_arr = np.array([w_T_m.translation for w_T_m in w_T_m_cpf_lst]) 
 
     # quaternion as angle axis in world frame
     w_rpy_m_arr =     np.array([pin.rpy.matrixToRpy(w_T_m.rotation) for w_T_m in w_T_m_lst]) 
     w_rpy_m_fbk_arr = np.array([pin.rpy.matrixToRpy(w_T_m.rotation) for w_T_m in w_T_m_fbk_lst]) 
     w_rpy_m_gtr_arr = np.array([pin.rpy.matrixToRpy(w_T_m.rotation) for w_T_m in w_T_m_gtr_lst]) 
+    w_rpy_m_cpf_arr = np.array([pin.rpy.matrixToRpy(w_T_m.rotation) for w_T_m in w_T_m_cpf_lst]) 
 
-    # Compute velocities in base frame rather than global frame
-    m_v_wm_arr =     np.array([w_T_m.rotation.T@w_v_wm for w_T_m, w_v_wm in zip(w_T_m_lst, w_v_wm_arr)])
-    m_v_wm_fbk_arr = np.array([w_T_m.rotation.T@w_v_wm for w_T_m, w_v_wm in zip(w_T_m_fbk_lst, w_v_wm_fbk_arr)])
-    m_v_wm_gtr_arr = np.array([w_T_m.rotation.T@w_v_wm for w_T_m, w_v_wm in zip(w_T_m_gtr_lst, w_v_wm_gtr_arr)])
+    # # Compute velocities in base frame rather than global frame
+    # m_v_wm_arr =     np.array([w_T_m.rotation.T@w_v_wm for w_T_m, w_v_wm in zip(w_T_m_lst, w_v_wm_arr)])
+    # m_v_wm_fbk_arr = np.array([w_T_m.rotation.T@w_v_wm for w_T_m, w_v_wm in zip(w_T_m_fbk_lst, w_v_wm_fbk_arr)])
+    # m_v_wm_gtr_arr = np.array([w_T_m.rotation.T@w_v_wm for w_T_m, w_v_wm in zip(w_T_m_gtr_lst, w_v_wm_gtr_arr)])
 
-    # Compute velocities due to lever arm and rotation
-    m_p_mi = i_T_m.inverse().translation
-    i_v_lever_arr = np.array([ np.cross(i_omg_oi-bi, i_T_m.rotation@m_p_mi) for i_omg_oi, bi  in zip(i_omg_oi_arr, imu_bias[:,3:])]) 
+    # TODO: velocities -> add omega x lever term
+    # w_v_wm_arr = np.array([w_T_o.rotation@o_v_ob for o_v_ob in o_v_ob_arr])
+    # w_v_wm_fbk_arr = np.array([w_T_o.rotation@o_v_ob for o_v_ob in o_v_ob_fbk_arr])
+
+    # Compute base velocities in base frame rather than global frame
+    o_R_b_lst = [o_T_i.rotation@i_T_b.rotation for o_T_i in o_T_i_lst]
+    o_R_b_fbk_lst = [o_T_i.rotation@i_T_b.rotation for o_T_i in o_T_i_fbk_lst]
+    b_v_ob_arr = np.array([o_R_b.T@o_v_ob for o_R_b, o_v_ob in zip(o_R_b_lst, o_v_ob_arr)])
+    b_v_ob_fbk_arr = np.array([o_R_b.T@o_v_ob for o_R_b, o_v_ob in zip(o_R_b_fbk_lst, o_v_ob_fbk_arr)])
+
+    # # Compute velocities due to lever arm and rotation (just for plotting...)
+    # m_p_mi = i_T_m.inverse().translation
+    # i_v_lever_arr = np.array([ np.cross(i_omg_oi-bi, i_T_m.rotation@m_p_mi) for i_omg_oi, bi  in zip(i_omg_oi_arr, imu_bias[:,3:])]) 
 
     # Covariances
     Nsig = 2
-    tkf_arr = arr_dic['tkf']
+    tkf_arr = res_dic['tkf']
     Nkf = len(tkf_arr)
-    # Qp = arr_dic['Qp']
-    # Qo = arr_dic['Qo']
-    # Qv = arr_dic['Qv']
-    # Qbi = arr_dic['Qbi']
-    # Qmp = arr_dic['Qm']
-    Qp = arr_dic['Qp_fbk']
-    Qo = arr_dic['Qo_fbk']
-    Qv = arr_dic['Qv_fbk']
-    Qbi = arr_dic['Qbi_fbk']
-    Qm = arr_dic['Qm_fbk']
+    # Qp = res_dic['Qp']
+    # Qo = res_dic['Qo']
+    # Qv = res_dic['Qv']
+    # Qbi = res_dic['Qbi']
+    # Qmp = res_dic['Qm']
+    Qp = res_dic['Qp_fbk']
+    Qo = res_dic['Qo_fbk']
+    Qv = res_dic['Qv_fbk']
+    Qbi = res_dic['Qbi_fbk']
+    Qm = res_dic['Qm_fbk']
     envel_p =  Nsig*np.sqrt(Qp)
     envel_o =  Nsig*np.sqrt(Qo)
     envel_v =  Nsig*np.sqrt(Qv)
@@ -545,14 +598,8 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
     envel_m = np.clip(envel_m, 6*[0], 3*[1] + 3*[0.5])
 
     # factor errors
-    fac_imu_err = arr_dic['fac_imu_err']
-    fac_pose_err = arr_dic['fac_pose_err']
-
-    i_pose_im_end = extr_mocap_fbk[-1,:]
-    i_T_b = pin.XYZQUATToSE3(i_pose_im_end)
-    b_T_i = i_T_b.inverse()
-    i_pose_im = pin.SE3ToXYZQUAT(b_T_i)
-
+    fac_imu_err = res_dic['fac_imu_err']
+    fac_pose_err = res_dic['fac_pose_err']
 
     print(traj_name)
     np.set_printoptions(precision=10,
@@ -590,6 +637,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
         plt.plot(t_arr, w_p_wm_arr[:,i], 'rgb'[i], label='est')
         plt.plot(t_arr, w_p_wm_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk', alpha=0.5, markersize=1)
         plt.plot(t_arr, w_p_wm_gtr_arr[:,i], 'rgb'[i]+'--', label='moc')
+        plt.plot(t_arr, w_p_wm_cpf_arr[:,i], 'rgb'[i]+'o', label='cpf')
     plt.xlabel('t (s)')
     plt.ylabel('P (m)')
     # plt.ylim(0.24, 0.34)
@@ -597,12 +645,12 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
     save_figs(fig, FIG_DIR_PATH+'pos_{}'.format(idx_exp), FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
-    fig = plt.figure('Velocity est vs mocap GLOBAL frame'+str(idx_exp))
-    plt.title('Velocity est vs mocap\n{}'.format(config))
+    fig = plt.figure('Velocity est vs base LOCAL frame'+str(idx_exp))
+    plt.title('Velocity est\n{}'.format(config))
     for i in range(3):
-        plt.plot(t_arr, w_v_wm_arr[:,i], 'rgb'[i], label='est')
-        plt.plot(t_arr, w_v_wm_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
-        plt.plot(t_arr, w_v_wm_gtr_arr[:,i], 'rgb'[i]+'--', label='moc')
+        plt.plot(t_arr, b_v_ob_arr[:,i], 'rgb'[i], label='est')
+        plt.plot(t_arr, b_v_ob_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
+        plt.plot(t_arr, b_v_ωb_cpf_arr[:,i], 'rgb'[i]+'--', label='cpf')
     plt.xlabel('t (s)')
     plt.ylabel('V (m/s)')
     plt.legend()
@@ -662,19 +710,19 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
     save_figs(fig, FIG_DIR_PATH+'err_pos_{}'.format(idx_exp), FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
     
-    title = 'Velocity error and covariances'
-    fig = plt.figure(title+str(idx_exp))
-    plt.suptitle(title+'\n{}'.format(config))
-    for k in range(3):
-        plt.subplot(3,1,1+k)
-        plt.plot(t_arr, w_v_wm_arr[:,k] - w_v_wm_gtr_arr[:,k], 'm', label='est')
-        plt.plot(t_arr, w_v_wm_fbk_arr[:,k] - w_v_wm_gtr_arr[:,k], 'c.', label='fbk')
-        if COV: 
-            plt.plot(tkf_arr,  envel_v[:,k], 'k', label='cov')
-            plt.plot(tkf_arr, -envel_v[:,k], 'k', label='cov')
-        plt.legend()
-    save_figs(fig, FIG_DIR_PATH+'err_vel_{}'.format(idx_exp), FILE_TYPES)
-    if CLOSE: plt.close(fig=fig)
+    # title = 'Velocity error and covariances'
+    # fig = plt.figure(title+str(idx_exp))
+    # plt.suptitle(title+'\n{}'.format(config))
+    # for k in range(3):
+    #     plt.subplot(3,1,1+k)
+    #     plt.plot(t_arr, w_v_wm_arr[:,k] - w_v_wm_gtr_arr[:,k], 'm', label='est')
+    #     plt.plot(t_arr, w_v_wm_fbk_arr[:,k] - w_v_wm_gtr_arr[:,k], 'c.', label='fbk')
+    #     if COV: 
+    #         plt.plot(tkf_arr,  envel_v[:,k], 'k', label='cov')
+    #         plt.plot(tkf_arr, -envel_v[:,k], 'k', label='cov')
+    #     plt.legend()
+    # save_figs(fig, FIG_DIR_PATH+'err_vel_{}'.format(idx_exp), FILE_TYPES)
+    # if CLOSE: plt.close(fig=fig)
 
     err_o =     np.array([pin.log(w_T_m.rotation*w_T_m_gtr.rotation.T) for w_T_m, w_T_m_gtr in zip(w_T_m_lst, w_T_m_gtr_lst)])
     err_o_fbk = np.array([pin.log(w_T_m.rotation*w_T_m_gtr.rotation.T) for w_T_m, w_T_m_gtr in zip(w_T_m_fbk_lst, w_T_m_gtr_lst)])
@@ -776,7 +824,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, delta_qa_idx) in enumerate(itertools.p
     #######
     # EXTRA
     #######
-    # omg_norm = np.linalg.norm(arr_dic['i_omg_oi'], axis=1)
+    # omg_norm = np.linalg.norm(res_dic['i_omg_oi'], axis=1)
     # title = 'P jumps = f(omg)'
     # fig = plt.figure(title+str(idx_exp))
     # plt.title(title+'\n{}'.format(config))
