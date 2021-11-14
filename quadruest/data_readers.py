@@ -236,7 +236,6 @@ if __name__ == '__main__':
 
     robot = load('solo12')
     print(robot.nv)
-    robot.initViewer()
     robot.initViewer(loadModel=True)
 
     gui = robot.viewer.gui
