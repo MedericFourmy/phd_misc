@@ -39,9 +39,10 @@ import matplotlib.pyplot as plt
 import pinocchio as pin
 
 SHOW = False
-RUN = True
+RUN = False
 
-FILE_TYPES = ['jpg', 'eps']
+FILE_TYPES = ['jpg', 'pdf']
+# FILE_TYPES = []
 CLOSE = not SHOW
 COV = False
 BODYDYNAMICS_PATH = '/home/mfourmy/Documents/Phd_LAAS/wolf/bodydynamics'
@@ -255,9 +256,9 @@ params_tree = create_bak_file_and_get_params(TREE_PARAM_FILE)
 
 # LAAS 11/9: solo walking and trotting, with and without round feet
 
-# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_round_feet_format.npz'
+params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_round_feet_format.npz'
 # params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_walk_round_feet_format.npz'
-params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_round_feet_with_yaw_format.npz'
+# params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_round_feet_with_yaw_format.npz'
 # params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_point_feet_format.npz'
 # params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_trot_point_feet_with_yaw_format.npz'
 # params['data_file_path'] = '/home/mfourmy/Documents/Phd_LAAS/data/quadruped_experiments/LAAS_21_11_09/solo_walk_point_feet_format.npz'
@@ -275,12 +276,14 @@ traj_name = params['data_file_path'].split('/')[-1].split('.npz')[0]
 # add a lil' extra something for each expe
 # traj_name += '_With_alt005'
 # traj_name += '_test'
-# traj_name += '_foot_radius'
+traj_name += '_feet_radius'
 # traj_name += '_testyaw_aligned'
+
+print('Trajectory:', traj_name)
 
 OUT_DIR = 'figs/window_experiments/'+traj_name+'/'
 
-remove_figs(OUT_DIR, FILE_TYPES+['txt'])
+remove_figs(OUT_DIR, FILE_TYPES+['txt', 'yaml'])
 
 if not os.path.exists(OUT_DIR):
     print('Create '+OUT_DIR+' folder')
@@ -347,12 +350,12 @@ params['std_abs_bias_acc'] =  100
 params['std_abs_bias_gyro'] = 100
 
 params['dt'] = 1e-3  # 1 kHz
-# params['max_t'] = 1.0
+# params['max_t'] = 4.0
 # params['max_t'] = 10.0
-params['max_t'] = 60.001
+# params['max_t'] = 40.001
 # params['max_t'] = 60.001
 # params['max_t'] = 70.001
-# params['max_t'] = 90.001
+params['max_t'] = 90.001
 
 
 # KF management
@@ -421,10 +424,6 @@ std_pose_o_deg = params['std_pose_o_deg']
 
 
 
-# sys.path.append(os.path.join(os.getcwd(), '../quadruest') )
-# from data_readers import shortened_arr_dic
-
-
 data_dic = np.load(params['data_file_path'])
 ω_T_b_lst = [pin.XYZQUATToSE3(ω_xyzquat_b) for ω_xyzquat_b in data_dic['esti_q_filt'][:,:7]]
 b_v_ωb_cpf_arr = data_dic['esti_filt_lin_vel']
@@ -463,7 +462,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
     if RUN: subprocess.run(RUN_FILE)
     compute_time = time.time()-t1
     compute_time_arr[alpha_qa_idx, n_frames_idx, foot_radius_idx] = compute_time 
-    print('Expe', idx_exp, 'took:', compute_time)
+    print('\nExpe', idx_exp, 'took:', compute_time, 's')
     
     config = {
         'alpha_qa': alpha_qa,
@@ -572,14 +571,18 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
     w_rpy_m_gtr_arr = np.array([pin.rpy.matrixToRpy(w_T_m.rotation) for w_T_m in w_T_m_gtr_lst]) 
     w_rpy_m_cpf_arr = np.array([pin.rpy.matrixToRpy(w_T_m.rotation) for w_T_m in w_T_m_cpf_lst]) 
 
-    # # Compute velocities in base frame rather than global frame
-    # m_v_wm_arr =     np.array([w_T_m.rotation.T@w_v_wm for w_T_m, w_v_wm in zip(w_T_m_lst, w_v_wm_arr)])
-    # m_v_wm_fbk_arr = np.array([w_T_m.rotation.T@w_v_wm for w_T_m, w_v_wm in zip(w_T_m_fbk_lst, w_v_wm_fbk_arr)])
-    # m_v_wm_gtr_arr = np.array([w_T_m.rotation.T@w_v_wm for w_T_m, w_v_wm in zip(w_T_m_gtr_lst, w_v_wm_gtr_arr)])
+    # Store pose in separe file for visualization
+    viz_dic = {
+        'w_pose_wm':     np.array([pin.SE3ToXYZQUAT(w_T_m) for w_T_m in w_T_m_lst]),
+        'w_pose_wm_fbk': np.array([pin.SE3ToXYZQUAT(w_T_m) for w_T_m in w_T_m_fbk_lst]),
+        'w_pose_wm_gtr': np.array([pin.SE3ToXYZQUAT(w_T_m) for w_T_m in w_T_m_gtr_lst]),
+        'w_pose_wm_cpf': np.array([pin.SE3ToXYZQUAT(w_T_m) for w_T_m in w_T_m_cpf_lst]),
+        'qa': res_dic['qa'],
+    }
+    viz_file = os.path.join(OUT_DIR, f'out_viz{idx_exp}.npz')
+    np.savez(viz_file, **viz_dic)
+    print('Saved', viz_file)
 
-    # TODO: velocities -> add omega x lever term
-    # w_v_wm_arr = np.array([w_T_o.rotation@o_v_ob for o_v_ob in o_v_ob_arr])
-    # w_v_wm_fbk_arr = np.array([w_T_o.rotation@o_v_ob for o_v_ob in o_v_ob_fbk_arr])
 
     # Compute base velocities in base frame rather than global frame
     o_R_b_lst = [o_T_i.rotation@i_T_b.rotation for o_T_i in o_T_i_lst]
@@ -623,7 +626,6 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
     fac_imu_err = res_dic['fac_imu_err']
     fac_pose_err = res_dic['fac_pose_err']
 
-    print(traj_name)
     np.set_printoptions(precision=10,
                         suppress=True,
                         linewidth=sys.maxsize,
@@ -633,12 +635,13 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
     def commas(arr):
         return ', '.join(str(a) for a in arr)
 
-    print('imu_bias END')
-    print('val', commas(imu_bias[-1,:]))
-    print('sig', commas(envel_bi[-1,:]))
-    print('Mocap i_pose_im END')
-    print('val', commas(i_pose_im))
-    print('sig', commas(envel_m[-1,:]))
+    # print('imu_bias END')
+    # print('val', commas(imu_bias[-1,:]))
+    # print('sig', commas(envel_bi[-1,:]))
+    # print('Mocap i_pose_im END')
+    # print('val', commas(i_pose_im))
+    # print('sig', commas(envel_m[-1,:]))
+
     # print('origin quaternion END')
     # print('val', o_q_b_arr[0,:])
     # print('sig', o_q_b_arr[0,:])
@@ -842,7 +845,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
         plt.plot(t_arr, imu_bias[:,i],     'rgb'[i], label='est')
         plt.plot(t_arr, imu_bias_fbk[:,i], 'rgb'[i]+'.', label='fbk')
         if COV: 
-            plt.plot(tkf_arr, imu_bias_fbk[-1,i]+envel_bi[:,i],   'rgb'[i]+'--', label='cov')
+            plt.plot(tkf_arr, imu_bias_fbk[-1,i]+envel_bi[:,i],  'rgb'[i]+'--', label='cov')
             plt.plot(tkf_arr, imu_bias_fbk[-1,i]-envel_bi[:,i],  'rgb'[i]+'--')
     plt.ylabel('bias acc (m/s^2)')
     plt.subplot(2,1,2)
@@ -893,5 +896,7 @@ restore_initial_file(PARAM_FILE)
 restore_initial_file(PROC_IMU_PARAM_FILE)
 restore_initial_file(TREE_PARAM_FILE)
 
+
+print(compute_time_arr)
 
 if SHOW: plt.show()
