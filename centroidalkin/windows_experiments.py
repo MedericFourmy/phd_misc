@@ -82,7 +82,7 @@ def qv2R(qvec):
 
 def save_figs(fig, name, format_list):
     for format in format_list:
-        fig.savefig(name+'.{}'.format(format), format=format)
+        fig.savefig(name+f'.{format}', format=format)
 
 def se3_avg(Tm_lst):
     nu_sum = sum([pin.log(Tm).vector for Tm in Tm_lst])
@@ -333,7 +333,7 @@ b_T_m = m_T_b.inverse()
 
 # std kinematic factor
 params['std_foot_nomove'] = 0.05  # m/(s^2 sqrt(Hz))
-params['std_altitude'] = 0.05  # m/(s^2 sqrt(Hz))
+params['std_altitude'] = 0.05  # m
 params['foot_radius'] = 0.00  # m
 
 
@@ -469,7 +469,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
         'n_frames': n_frames,
         'foot_radius': foot_radius
     }
-    with open(OUT_DIR+'conf_{}.yaml'.format(idx_exp), 'w') as fw: yaml.dump(config, fw)
+    with open(OUT_DIR+f'conf_{idx_exp}.yaml', 'w') as fw: yaml.dump(config, fw)
 
     # load raw results and compute rmses
     res_dic = np.load(params['out_npz_file_path'])
@@ -573,10 +573,10 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
 
     # Store pose in separe file for visualization
     viz_dic = {
-        'w_pose_wm':     np.array([pin.SE3ToXYZQUAT(w_T_m) for w_T_m in w_T_m_lst]),
-        'w_pose_wm_fbk': np.array([pin.SE3ToXYZQUAT(w_T_m) for w_T_m in w_T_m_fbk_lst]),
-        'w_pose_wm_gtr': np.array([pin.SE3ToXYZQUAT(w_T_m) for w_T_m in w_T_m_gtr_lst]),
-        'w_pose_wm_cpf': np.array([pin.SE3ToXYZQUAT(w_T_m) for w_T_m in w_T_m_cpf_lst]),
+        'w_pose_m':     np.array([pin.SE3ToXYZQUAT(w_T_m) for w_T_m in w_T_m_lst]),
+        'w_pose_m_fbk': np.array([pin.SE3ToXYZQUAT(w_T_m) for w_T_m in w_T_m_fbk_lst]),
+        'w_pose_m_gtr': np.array([pin.SE3ToXYZQUAT(w_T_m) for w_T_m in w_T_m_gtr_lst]),
+        'w_pose_m_cpf': np.array([pin.SE3ToXYZQUAT(w_T_m) for w_T_m in w_T_m_cpf_lst]),
         'qa': res_dic['qa'],
     }
     viz_file = os.path.join(OUT_DIR, f'out_viz{idx_exp}.npz')
@@ -650,14 +650,14 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
 
 
 
-    config = '.\n'.join(["{}: {}".format(k, v) for k, v in config.items()])
+    config = '.\n'.join([f'{k}: {v}' for k, v in config.items()])
     
 
     #######################
     # TRAJECTORY EST VS GTR
     #######################
     fig = plt.figure('Position est vs mocap'+str(idx_exp))
-    plt.suptitle('Position est vs mocap\n{}'.format(config))
+    plt.suptitle(f'Position est vs mocap\n{config}')
     for i in range(3):
         plt.subplot(3,1,1+i)
         plt.plot(t_arr, w_p_wm_arr[:,i],     c=colors[0], label='est')
@@ -668,24 +668,24 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
         plt.ylabel('P{} (m)'.format('xyz'[i]))
         # plt.ylim(0.24, 0.34)
         plt.legend()
-    save_figs(fig, OUT_DIR+'pos_{}'.format(idx_exp), FILE_TYPES)
+    save_figs(fig, OUT_DIR+f'pos_{idx_exp}', FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
     fig = plt.figure('Position est XY'+str(idx_exp))
-    plt.title('Position est XY\n{}'.format(config))
+    plt.title(f'Position est XY\n{config}')
     plt.plot(w_p_wm_arr[:,0],     w_p_wm_arr[:,1],     c=colors[0], label='est')
     plt.plot(w_p_wm_fbk_arr[:,0], w_p_wm_fbk_arr[:,1], c=colors[1], label='fbk')
     plt.plot(w_p_wm_cpf_arr[:,0], w_p_wm_cpf_arr[:,1], c=colors[2], label='cpf')
     plt.plot(w_p_wm_gtr_arr[:,0], w_p_wm_gtr_arr[:,1], c=colors[3], label='moc')
-    plt.xlabel('t (s)')
-    plt.ylabel('P{} (m)'.format('xyz'[i]))
+    plt.xlabel('Px (m)')
+    plt.ylabel('Py (m)')
     # plt.ylim(0.24, 0.34)
     plt.legend()
-    save_figs(fig, OUT_DIR+'posXY_{}'.format(idx_exp), FILE_TYPES)
+    save_figs(fig, OUT_DIR+f'posXY_{idx_exp}', FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
     fig = plt.figure('Velocity est vs base LOCAL frame'+str(idx_exp))
-    plt.suptitle('Velocity est\n{}'.format(config))
+    plt.suptitle(f'Velocity est\n{config}')
     for i in range(3):
         plt.subplot(3,1,1+i)
         plt.plot(t_arr, b_v_ob_arr[:,i],     c=colors[0], label='est')
@@ -694,11 +694,11 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
         plt.xlabel('t (s)')
         plt.ylabel('V{} (m)'.format('xyz'[i]))
         plt.legend()
-    save_figs(fig, OUT_DIR+'vel_{}'.format(idx_exp), FILE_TYPES)
+    save_figs(fig, OUT_DIR+f'vel_{idx_exp}', FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
     # fig = plt.figure('Velocity est vs mocap BASE frame'+str(idx_exp))
-    # plt.title('Velocity est vs mocap\n{}'.format(config))
+    # plt.title('Velocity est vs mocap\n{config}')
     # for i in range(3):
     #     plt.plot(t_arr, m_v_wm_arr[:,i], 'rgb'[i], label='est')
     #     plt.plot(t_arr, m_v_wm_fbk_arr[:,i], 'rgb'[i]+'.', label='fbk')
@@ -706,22 +706,22 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
     # plt.xlabel('t (s)')
     # plt.ylabel('V (m/s)')
     # plt.legend()
-    # save_figs(OUT_DIR+'vel_base_{}'.format(idx_exp), FILE_TYPES)
+    # save_figs(OUT_DIR+'vel_base_{idx_exp}', FILE_TYPES)
     # if CLOSE: plt.close(fig=fig)
 
     # fig = plt.figure('Velocity lever arm'+str(idx_exp))
-    # plt.title('Velocity lever arm\n{}'.format(config))
+    # plt.title('Velocity lever arm\n{config}')
     # for i in range(3):
     #     plt.plot(t_arr, i_v_lever_arr[:,i], 'rgb'[i], label='est')
     # plt.xlabel('t (s)')
     # plt.ylabel('V (m/s)')
     # plt.legend()
-    # save_figs(OUT_DIR+'vel_lever_{}'.format(idx_exp), FILE_TYPES)
+    # save_figs(OUT_DIR+'vel_lever_{idx_exp}', FILE_TYPES)
     # if CLOSE: plt.close(fig=fig)
 
 
     fig = plt.figure('Orientation est vs mocap'+str(idx_exp))
-    plt.suptitle('Orientation est vs mocap\n{}'.format(config))
+    plt.suptitle(f'Orientation est vs mocap\n{config}')
     for i in range(3):
         plt.subplot(3,1,1+i)
         plt.plot(t_arr, w_rpy_m_arr[:,i],     c=colors[0], label='est')
@@ -731,7 +731,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
         plt.xlabel('t (s)')
         plt.ylabel('O{} (m)'.format('xyz'[i]))
         plt.legend()
-    save_figs(fig, OUT_DIR+'orientation_{}'.format(idx_exp), FILE_TYPES)
+    save_figs(fig, OUT_DIR+f'orientation_{idx_exp}', FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
 
@@ -740,7 +740,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
     #############
     title = 'Position error and covariances'
     fig = plt.figure(title+str(idx_exp))
-    plt.suptitle(title+'\n{}'.format(config))
+    plt.suptitle(title+f'\n{config}')
     for k in range(3):
         plt.subplot(3,1,1+k, label='')
         plt.plot(t_arr, w_p_wm_arr[:,k] - w_p_wm_gtr_arr[:,k], 'm', label='est')
@@ -749,12 +749,12 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
             plt.plot(tkf_arr,  envel_p[:,k], 'k', label='cov')
             plt.plot(tkf_arr, -envel_p[:,k], 'k', label='cov')
         plt.legend()
-    save_figs(fig, OUT_DIR+'err_pos_{}'.format(idx_exp), FILE_TYPES)
+    save_figs(fig, OUT_DIR+f'err_pos_{idx_exp}', FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
     
     # title = 'Velocity error and covariances'
     # fig = plt.figure(title+str(idx_exp))
-    # plt.suptitle(title+'\n{}'.format(config))
+    # plt.suptitle(title+'\n{config}')
     # for k in range(3):
     #     plt.subplot(3,1,1+k)
     #     plt.plot(t_arr, w_v_wm_arr[:,k] - w_v_wm_gtr_arr[:,k], 'm', label='est')
@@ -763,7 +763,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
     #         plt.plot(tkf_arr,  envel_v[:,k], 'k', label='cov')
     #         plt.plot(tkf_arr, -envel_v[:,k], 'k', label='cov')
     #     plt.legend()
-    # save_figs(fig, OUT_DIR+'err_vel_{}'.format(idx_exp), FILE_TYPES)
+    # save_figs(fig, OUT_DIR+f'err_vel_{idx_exp}', FILE_TYPES)
     # if CLOSE: plt.close(fig=fig)
 
     err_o =     np.array([pin.log(w_T_m.rotation*w_T_m_gtr.rotation.T) for w_T_m, w_T_m_gtr in zip(w_T_m_lst, w_T_m_gtr_lst)])
@@ -771,7 +771,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
 
     title = 'Orientation error and covariances'
     fig = plt.figure(title+str(idx_exp))
-    plt.suptitle(title+'\n{}'.format(config))
+    plt.suptitle(title+f'\n{config}')
     for k in range(3):
         plt.subplot(3,1,1+k)
         plt.plot(t_arr, err_o[:,k], 'm', label='est')
@@ -780,7 +780,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
             plt.plot(tkf_arr,  envel_o[:,k], 'k', label='cov')
             plt.plot(tkf_arr, -envel_o[:,k], 'k', label='cov')
         plt.legend()
-    save_figs(fig, OUT_DIR+'err_rot_{}'.format(idx_exp), FILE_TYPES)
+    save_figs(fig, OUT_DIR+f'err_rot_{idx_exp}', FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
     ###############
@@ -788,26 +788,26 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
     ###############
     title = 'Factor IMU err'
     fig = plt.figure(title+str(idx_exp))
-    plt.suptitle(title+'\n{}'.format(config))    
+    plt.suptitle(title+f'\n{config}')    
     for k in range(3):
         plt.subplot(3,1,1+k)
         plt.title('POV'[k])
         plt.plot(tkf_arr, fac_imu_err[:,0+3*k], 'r')
         plt.plot(tkf_arr, fac_imu_err[:,1+3*k], 'g')
         plt.plot(tkf_arr, fac_imu_err[:,2+3*k], 'b')
-    save_figs(fig, OUT_DIR+'fac_imu_errors_{}'.format(idx_exp), FILE_TYPES)
+    save_figs(fig, OUT_DIR+f'fac_imu_errors_{idx_exp}', FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
     title = 'Factor Pose err'
     fig = plt.figure(title+str(idx_exp))
-    plt.suptitle(title+'\n{}'.format(config))    
+    plt.suptitle(title+f'\n{config}')    
     for k in range(2):
         plt.subplot(2,1,1+k)
         plt.title('PO'[k])
         plt.plot(tkf_arr, fac_pose_err[:,0+2*k], 'r')
         plt.plot(tkf_arr, fac_pose_err[:,1+2*k], 'g')
         plt.plot(tkf_arr, fac_pose_err[:,2+2*k], 'b')
-    save_figs(fig, OUT_DIR+'fac_pose_errors_{}'.format(idx_exp), FILE_TYPES)
+    save_figs(fig, OUT_DIR+f'fac_pose_errors_{idx_exp}', FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
     
     ############
@@ -815,7 +815,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
     ############
     title = 'Extrinsics MOCAP'
     fig = plt.figure(title+str(idx_exp))
-    plt.suptitle(title+'\n{}'.format(config))    
+    plt.suptitle(title+f'\n{config}')    
     plt.subplot(2,1,1)
     plt.title('P')
     for i in range(3):
@@ -834,12 +834,12 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
             plt.plot(tkf_arr, extr_mocap_fbk[-1,3+i]-envel_m[:,3+i], 'rgb'[i]+'--')
     # plt.plot(t_arr, extr_mocap_fbk[:,6], 'k')  
     plt.ylabel('i_q_m (rad)')  
-    save_figs(fig, OUT_DIR+'extr_mocap_{}'.format(idx_exp), FILE_TYPES)
+    save_figs(fig, OUT_DIR+f'extr_mocap_{idx_exp}', FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
     
     title = 'IMU biases'
     fig = plt.figure(title+str(idx_exp))
-    plt.suptitle(title+'\n{}'.format(config))    
+    plt.suptitle(title+f'\n{config}')    
     plt.subplot(2,1,1)
     for i in range(3):
         plt.plot(t_arr, imu_bias[:,i],     'rgb'[i], label='est')
@@ -858,7 +858,7 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
     plt.xlabel('t (s)')
     plt.ylabel('bias gyro (rad/s)')
     plt.legend()
-    save_figs(fig, OUT_DIR+'imu_bias_{}'.format(idx_exp), FILE_TYPES)
+    save_figs(fig, OUT_DIR+f'imu_bias_{idx_exp}', FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
     
@@ -869,26 +869,26 @@ for idx_exp, (alpha_qa_idx, n_frames_idx, foot_radius_idx) in enumerate(itertool
     # omg_norm = np.linalg.norm(res_dic['i_omg_oi'], axis=1)
     # title = 'P jumps = f(omg)'
     # fig = plt.figure(title+str(idx_exp))
-    # plt.title(title+'\n{}'.format(config))
+    # plt.title(title+f'\n{config}')
     # for i in range(3):
     #     plt.plot(omg_norm, o_p_ob_fbk_diff[:,i], 'rgb'[i]+'.')
-    # save_figs(OUT_DIR+'jump_P_fbk_f(gyro)_{}'.format(idx_exp), FILE_TYPES)
+    # save_figs(OUT_DIR+f'jump_P_fbk_f(gyro)_{idx_exp}', FILE_TYPES)
     # if CLOSE: plt.close(fig=fig)
 
     title = 'P jumps = f(t)'
     fig = plt.figure(title+str(idx_exp))
-    plt.title(title+'\n{}'.format(config))
+    plt.title(title+f'\n{config}')
     for i in range(3):
         plt.plot(t_arr, o_p_ob_fbk_diff[:,i], 'rgb'[i]+'.')
-    save_figs(fig, OUT_DIR+'jump_P_fbk_f(t)_{}'.format(idx_exp), FILE_TYPES)
+    save_figs(fig, OUT_DIR+f'jump_P_fbk_f(t)_{idx_exp}', FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
     title = 'V jumps = f(t)'
     fig = plt.figure(title+str(idx_exp))
-    plt.title(title+'\n{}'.format(config))
+    plt.title(title+f'\n{config}')
     for i in range(3):
         plt.plot(t_arr, o_v_ob_fbk_diff[:,i], 'rgb'[i]+'.')
-    save_figs(fig, OUT_DIR+'jump_V_fbk_f(t)_{}'.format(idx_exp), FILE_TYPES)
+    save_figs(fig, OUT_DIR+f'jump_V_fbk_f(t)_{idx_exp}', FILE_TYPES)
     if CLOSE: plt.close(fig=fig)
 
 
