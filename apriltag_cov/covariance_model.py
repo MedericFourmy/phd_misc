@@ -2,22 +2,6 @@ import numpy as np
 import yaml
 
 
-def get_cam_model(path):
-    """
-    Assuming ros calibration convention
-    """
-    with open(path) as f:
-        parsed = yaml.load(f, Loader=yaml.FullLoader)
-
-    width = parsed['width']
-    height = parsed['height']
-    projection_matrix = parsed['projection_matrix']
-
-    K = np.array(projection_matrix['data']).reshape((projection_matrix['rows'], projection_matrix['cols']))[:,:3]
-
-    return width, height, K
-    
-
 def compute_covariance(t, R, K, a_points, sig_pix):
     J_cproj_TR = points_projection_jac(t, R, K, a_points)
     cov_tR = sig_pix**2 * np.linalg.inv(J_cproj_TR.T @ J_cproj_TR)
@@ -96,9 +80,27 @@ def pinhole_jac(t, R, K, p):
     return np.hstack([J_h_T, J_h_R])
         
 
+def get_cam_model(path):
+    """
+    Assuming ros calibration convention
+    """
+    with open(path) as f:
+        parsed = yaml.load(f, Loader=yaml.FullLoader)
+
+    width = parsed['width']
+    height = parsed['height']
+    projection_matrix = parsed['projection_matrix']
+
+    K = np.array(projection_matrix['data']).reshape((projection_matrix['rows'], projection_matrix['cols']))[:,:3]
+
+    return width, height, K
+    
+
 if __name__ == '__main__':
     import cv2
     import pinocchio as pin
+    import matplotlib.pyplot as plt
+    import seaborn as sns
 
 
     tag_width = 0.1
@@ -130,12 +132,13 @@ if __name__ == '__main__':
     t, R = T.translation, T.rotation
     # t[0] = 1
     # t[1] = 1
-    t[2] = 1
+    t[2] = 2
     R = pin.rpy.rpyToMatrix(0.1, -0.0, 0.1)
 
     # J = points_projection_jac(t, R, K, a_corners)
     sig_pix = 1
     Q = compute_covariance(t, R, K, a_corners, sig_pix)
+    print(Q)
 
 
 
