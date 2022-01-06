@@ -6,7 +6,8 @@ import plotly.offline as pltly
 
 import seaborn as sns
 from covariance_model import points_projection, compute_covariance, get_cam_model
-from ellipsoid import Ellipsoid, ellipsoid_meshes, plot_ellipsoid_3d_mpl, set_axes_equal
+from ellipsoid import Ellipsoid, ellipsoid_meshes, plot_ellipsoid_3d_mpl
+from plot_utils import plot_frames, set_axes_equal
 
 
 def plot_tag_projection(points):
@@ -50,17 +51,6 @@ def plot_plotly(ells):
     pltly.plot(meshes)
 
 
-def plot_mpl(ells, ax):
-    plot_ellipsoid_3d_mpl(ells[0], ax)
-    plot_ellipsoid_3d_mpl(ells[1], ax)
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    set_axes_equal(ax)
-
-
-def plot_frames(T_lst, ax):
-    pass
 
 
 def plot_projs(points_lst, ax):
@@ -72,12 +62,35 @@ def plot_projs(points_lst, ax):
     fig.axes[0].set_aspect('equal')
 
 
+def generate_transfo():
+    x_range = -0.15, 0, 0.15
+    z_range = np.arange(1, 5)
+
+    T_lst = []
+
+    for z in z_range:
+        for x in x_range:
+            R = np.eye(3)
+            # R = pin.rpy.rpyToMatrix(np.pi/10, 0, 0)
+            T = pin.SE3(R, np.array([3*z*x, 0, z]))
+            T_lst.append(T)
+
+    return T_lst
+
+    # t1 = np.array([0.15, 0, 2.0])
+    # R1 = pin.rpy.rpyToMatrix(np.deg2rad([0.0, 0, 0]))
+    # T1 = pin.SE3(R1, t1)
+
+    # t2 = np.array([-0.15, 0, 2.0])
+    # R2 = pin.rpy.rpyToMatrix(np.deg2rad([0.0, 0, 0]))
+    # T2 = pin.SE3(R2, t2)
+
 
 if __name__ == '__main__':
 
     width, height, K = get_cam_model('camera_realsense.yml')
     tag_width = 0.2
-    sig_pix = 3.0
+    sig_pix = 2.0
     a_corners = 0.5*tag_width*np.array([
         [-1,  1, 0], # bottom left
         [ 1,  1, 0], # bottom right
@@ -85,34 +98,52 @@ if __name__ == '__main__':
         [-1, -1, 0], # top left
     ])
 
-
-    t1 = np.array([0.15, 0, 2.0])
-    R1 = pin.rpy.rpyToMatrix(np.deg2rad([0.0, 80, 0]))
-    T1 = pin.SE3(R1, t1)
-
-    t2 = np.array([-0.15, 0, 2.0])
-    R2 = pin.rpy.rpyToMatrix(np.deg2rad([0.0, -80, 0]))
-    T2 = pin.SE3(R2, t2)
-
-    T_lst = [T1, T2]
-
+    T_lst = generate_transfo()
+    # express all quantities in a alternate world frame "w prime"
+    # wp_T_w = pin.SE3(pin.rpy.rpyToMatrix(0,-np.pi/2,np.pi/2), np.zeros(3))
+    # T_lst = [wp_T_w*T for T in T_lst]
+    
     points_lst, Q_lst = project_multiple(T_lst, K, a_corners, sig_pix)
-    Q_lst = [Q[:3,:3] for Q in Q_lst]
+    # chi square ctrical value for dimension 3 and 99 confidence 3 sigma interval
+    # https://www.itl.nist.gov/div898/handbook/eda/section3/eda3674.htm
+    chi2_conf = 11.345
+    # chi2_conf = 500
+    Q_lst = [chi2_conf*Q[:3,:3] for Q in Q_lst]  # POSITION ERROR
+    # Q_lst = [chi2_conf*Q[3:6,3:6] for Q in Q_lst]  # ORIENTATION ERROR
     ells = cov2ellipses(T_lst, Q_lst)
-
-    # PLOTLY
-    plot_plotly(ells)
 
     plt.rcParams["figure.figsize"] = (15,10) 
     # MATPLOTLIB
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d') 
-    plot_mpl(ells, ax)
+    plot_frames(ax, pin.SE3.Identity(), la=0.3, ms=10, lw=2)  # camera frame
+    # plot_frames(ax, wp_T_w, 0.2, ms=10, lw=2)  # camera frame
+    plot_frames(ax, T_lst, la=0.4, ms=10, lw=1)  # tag frames
+    for ell in ells:
+        plot_ellipsoid_3d_mpl(ax, ell, color='gray')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    # in degrees
+    # ax.azim = -50
+    # ax.elev = -50
+    # limits = (
+    #     (-0.2, 0.5),
+    #     (-0.2, 0.5),
+    #     (-0.2, 1.5),
+    # )
+    # set_axes_equal(ax, limits)
+    set_axes_equal(ax)
 
     # 2D projection of tags
     fig = plt.figure()
     ax = fig.add_subplot()
     plot_projs(points_lst, ax)
+
+
+
+    # PLOTLY
+    # plot_plotly(ells)
 
 
     plt.show()
