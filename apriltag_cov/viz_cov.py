@@ -1,31 +1,49 @@
 import numpy as np
+from numpy.lib.function_base import append
 from numpy.linalg.linalg import inv
 import pinocchio as pin
 import matplotlib.pyplot as plt
 import plotly.offline as pltly
 
 import seaborn as sns
-from covariance_model import points_projection, compute_covariance, get_cam_model
+from cov_model import points_projection, compute_covariance, get_cam_model, get_cam_model_cv
 from ellipsoid import Ellipsoid, ellipsoid_meshes, plot_ellipsoid_3d_mpl
 from plot_utils import plot_frames, set_axes_equal
 
 
-def plot_tag_projection(points):
-    pts = points.copy()
-    pts[:,1] = -pts[:,1] + height
 
-    c = 'rgbk'
+def plot_projs(points_lst, ax, colors=None):
+    # plot projections
+    if colors is None:
+        colors = len(points_lst)*[None]
+    for i, points in enumerate(points_lst):
+        plot_tag_projection(points, color=colors[i])
+    plt.xlim(0, width)
+    plt.ylim(0, height)
+    ax.set_aspect('equal')
+
+
+def plot_tag_projection(points, color=None):
+    pts = points.copy()
+    # pts[:,1] = -pts[:,1] + height  # not needed if matplotlib ax.invert_yaxis()
+
+    corners_col = 'rgbk'
     # plot only the corners
     for i, p in enumerate(pts):
-        plt.plot(p[0], p[1], c[i]+'x')
+        plt.plot(p[0], p[1], corners_col[i]+'x')
     # plot point junctions
     for i in range(4):
+        if color is None:
+            c = corners_col[i]
+        else:
+            c = color
         if i == 3:
             x12, y12 = [pts[3,0], pts[0,0]], [pts[3,1], pts[0,1]]
-            plt.plot(x12, y12, c[i])
+
+            plt.plot(x12, y12, c)
         else:
             x12, y12 = pts[i:i+2,0], pts[i:i+2,1]
-            plt.plot(x12, y12, c[i])
+            plt.plot(x12, y12, c)
 
 
 def project_multiple(T_lst, K, a_corners, sig_pix):
@@ -53,44 +71,38 @@ def plot_plotly(ells):
 
 
 
-def plot_projs(points_lst, ax):
-    # plot projections
-    for points in points_lst:
-        plot_tag_projection(points)
-    plt.xlim(0, width)
-    plt.ylim(0, height)
-    fig.axes[0].set_aspect('equal')
-
 
 def generate_transfo():
-    x_range = -0.15, 0, 0.15
-    z_range = np.arange(1, 5)
+
+    # T_lst = []
+    # x_range = -0.15, 0, 0.15
+    # z_range = np.arange(1, 5)
+    # for z in z_range:
+    #     for x in x_range:
+    #         R = np.eye(3)
+    #         # R = pin.rpy.rpyToMatrix(np.deg2rad([5, 0, 0]))
+    #         T = pin.SE3(R, np.array([3*z*x, 0, z]))
+    #         T_lst.append(T)
 
     T_lst = []
-
-    for z in z_range:
-        for x in x_range:
-            R = np.eye(3)
-            # R = pin.rpy.rpyToMatrix(np.pi/10, 0, 0)
-            T = pin.SE3(R, np.array([3*z*x, 0, z]))
-            T_lst.append(T)
+    T = pin.SE3(pin.rpy.rpyToMatrix(np.deg2rad([0.0, 0, 0])), np.array([0.0, 0, 0.5])); T_lst.append(T)
+    T = pin.SE3(pin.rpy.rpyToMatrix(np.deg2rad([0.0, 0, 0])), np.array([0.0, 0, 0.6])); T_lst.append(T)
+    T = pin.SE3(pin.rpy.rpyToMatrix(np.deg2rad([0.0, 0, 0])), np.array([0.1, 0, 0.5])); T_lst.append(T)
+    # T = pin.SE3(pin.rpy.rpyToMatrix(np.deg2rad([30, 0, 0])), np.array([0.0, 0, 2])); T_lst.append(T)
+    # T = pin.SE3(pin.rpy.rpyToMatrix(np.deg2rad([, 0, 0])), np.array([0.0, 0, 2])); T_lst.append(T)
 
     return T_lst
-
-    # t1 = np.array([0.15, 0, 2.0])
-    # R1 = pin.rpy.rpyToMatrix(np.deg2rad([0.0, 0, 0]))
-    # T1 = pin.SE3(R1, t1)
-
-    # t2 = np.array([-0.15, 0, 2.0])
-    # R2 = pin.rpy.rpyToMatrix(np.deg2rad([0.0, 0, 0]))
-    # T2 = pin.SE3(R2, t2)
 
 
 if __name__ == '__main__':
 
     width, height, K = get_cam_model('camera_realsense.yml')
-    tag_width = 0.2
-    sig_pix = 2.0
+    print(K)
+    # width, height, K = get_cam_model_cv('camera_mohamed.yml')
+    # print(K)
+    tag_width = 0.158  # LAAS_solo_walk_11_21
+    # tag_width = 0.2
+    sig_pix = 1.0
     a_corners = 0.5*tag_width*np.array([
         [-1,  1, 0], # bottom left
         [ 1,  1, 0], # bottom right
@@ -108,19 +120,19 @@ if __name__ == '__main__':
     # https://www.itl.nist.gov/div898/handbook/eda/section3/eda3674.htm
     chi2_conf = 11.345
     # chi2_conf = 500
-    Q_lst = [chi2_conf*Q[:3,:3] for Q in Q_lst]  # POSITION ERROR
-    # Q_lst = [chi2_conf*Q[3:6,3:6] for Q in Q_lst]  # ORIENTATION ERROR
+    # Q_lst = [chi2_conf*Q[:3,:3] for Q in Q_lst]  # POSITION COV
+    Q_lst = [chi2_conf*Q[3:6,3:6] for Q in Q_lst]  # ORIENTATION COV
     ells = cov2ellipses(T_lst, Q_lst)
 
     plt.rcParams["figure.figsize"] = (15,10) 
     # MATPLOTLIB
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d') 
-    plot_frames(ax, pin.SE3.Identity(), la=0.3, ms=10, lw=2)  # camera frame
+    plot_frames(ax, pin.SE3.Identity(), la=0.2, ms=10, lw=1)  # camera frame
     # plot_frames(ax, wp_T_w, 0.2, ms=10, lw=2)  # camera frame
-    plot_frames(ax, T_lst, la=0.4, ms=10, lw=1)  # tag frames
+    plot_frames(ax, T_lst, la=0.3, ms=10, lw=1)  # tag frames
     for ell in ells:
-        plot_ellipsoid_3d_mpl(ax, ell, color='gray')
+        plot_ellipsoid_3d_mpl(ax, ell, color='orange')
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
@@ -137,8 +149,16 @@ if __name__ == '__main__':
 
     # 2D projection of tags
     fig = plt.figure()
+    plt.title('Apriltag projection', fontsize=30)
     ax = fig.add_subplot()
-    plot_projs(points_lst, ax)
+    colors = ['black', 'lightcoral', 'orange']
+    print(points_lst)
+    # plot_projs(points_lst, ax)
+    plot_projs(points_lst, ax, colors=colors)
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.invert_yaxis()
+    # plt.grid()
+    plt.savefig('apriltag_proj.pdf', format='pdf')
 
 
 

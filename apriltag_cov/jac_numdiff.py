@@ -1,5 +1,5 @@
 import numpy as np
-from covariance_model import *
+from apriltag_cov.cov_model import *
 
 EPS = 1e-9
 

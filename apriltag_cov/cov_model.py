@@ -89,12 +89,24 @@ def get_cam_model(path):
 
     width = parsed['width']
     height = parsed['height']
-    projection_matrix = parsed['projection_matrix']
+    mat = parsed['projection_matrix']
 
-    K = np.array(projection_matrix['data']).reshape((projection_matrix['rows'], projection_matrix['cols']))[:,:3]
+    K = np.array(mat['data']).reshape((mat['rows'], mat['cols']))[:,:3]
 
     return width, height, K
     
+def get_cam_model_cv(path):
+    with open(path) as f:
+        parsed = yaml.load(f, Loader=yaml.FullLoader)
+
+    width = parsed['image_width']
+    height = parsed['image_height']
+    mat = parsed['camera_matrix']
+
+    K = np.array(mat['data']).reshape((mat['rows'], mat['cols']))
+
+    return width, height, K
+
 
 if __name__ == '__main__':
     import cv2

@@ -139,7 +139,7 @@ def plot_ellipsoid_3d_mpl(ax, ell, color='#2980b9'):
             x[i,j], y[i,j], z[i,j] = ell.ctr + np.dot(ell.axes,
                                                       [x[i,j],y[i,j],z[i,j]])
 
-    ax.plot_wireframe(x, y, z,  rstride=4, cstride=4, color=color, alpha=0.2)
+    ax.plot_wireframe(x, y, z,  rstride=4, cstride=4, color=color, alpha=0.1)
 
 
 
