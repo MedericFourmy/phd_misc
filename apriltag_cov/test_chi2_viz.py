@@ -18,9 +18,11 @@ A = np.linalg.inv(chi2_conf*cov_mat)
 ell = Ellipsoid(mu_vec, A)
 # 99% of the sampled points should be in the ellipsoid -> and it is!
 perc_in = sum(ell.contains(pt) for pt in samples)/N
+print('Percentage of samples inside the confidence ellipse:')
 print(perc_in)
 
 fig = plt.figure()
+plt.title('Chi2 test 99% confidence ellipse')
 ax = fig.add_subplot(projection='3d') 
 ax.plot(samples[:,0], samples[:,1], samples[:,2], '.', markersize=3, color='g', alpha=0.1)
 plot_ellipsoid_3d_mpl(ax, ell)

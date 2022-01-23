@@ -109,10 +109,7 @@ def get_cam_model_cv(path):
 
 
 if __name__ == '__main__':
-    import cv2
     import pinocchio as pin
-    import matplotlib.pyplot as plt
-    import seaborn as sns
 
 
     tag_width = 0.1
@@ -150,6 +147,7 @@ if __name__ == '__main__':
     # J = points_projection_jac(t, R, K, a_corners)
     sig_pix = 1
     Q = compute_covariance(t, R, K, a_corners, sig_pix)
+    print('Q')
     print(Q)
 
 

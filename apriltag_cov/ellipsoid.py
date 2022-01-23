@@ -122,6 +122,7 @@ class Ellipsoid:
     def __repr__(self):
         return "Ellipsoid(ctr={})".format(self.ctr)
 
+# ---------------------------------------------------------------------------------------
 
 def plot_ellipsoid_3d_mpl(ax, ell, color='#2980b9'):
     """Plot the 3-d Ellipsoid ell on the Axes3D ax."""
@@ -160,9 +161,9 @@ def ellipsoid_meshes(ell):
         for j in range(len(x)):
             x[i,j], y[i,j], z[i,j] = ell.ctr + np.dot(ell.axes,
                                                       [x[i,j],y[i,j],z[i,j]])
-    print('x.max()')
-    print(x.min())
-    print(x.max())
+    # print('x.max()')
+    # print(x.min())
+    # print(x.max())
 
 
     # The alphahull parameter sets the shape of the mesh. 
@@ -184,23 +185,23 @@ def ellipsoid_meshes(ell):
 
 
 if __name__ == '__main__':
+    import matplotlib.pyplot as plt
     import pinocchio as pin
 
     ctr1 = np.array([0,0,0])
     ctr2 = np.array([2,0,0])
     # define INFORMATION matrix
-    A = 0.25*np.array([
-        [1, 0, 0,],
+    I1 = 0.25*np.array([
+        [2, 0, 0,],
         [0, 1, 0,],
         [0, 0, 1,],
     ])
     R = pin.rpy.rpyToMatrix(np.deg2rad([0, 45, 0]))
-    Q = R.T @ A @ R
-    ell1 = Ellipsoid(ctr1, A)
-    ell2 = Ellipsoid(ctr2, Q)
+    I2 = R.T @ I1 @ R
+    ell1 = Ellipsoid(ctr1, I1)
+    ell2 = Ellipsoid(ctr2, I2)
 
     # MATPLOTLIB == CRAP for 3D
-    import matplotlib.pyplot as plt
     plt.rcParams["figure.figsize"] = (15,10) 
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d') 

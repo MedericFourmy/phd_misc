@@ -69,9 +69,9 @@ def set_axes_equal(ax, limits=None):
     else:
         x_limits, y_limits, z_limits = limits
 
-    print('x_limits', x_limits)
-    print('y_limits', y_limits)
-    print('z_limits', z_limits)
+    # print('x_limits', x_limits)
+    # print('y_limits', y_limits)
+    # print('z_limits', z_limits)
 
     x_range = abs(x_limits[1] - x_limits[0])
     x_middle = np.mean(x_limits)
