@@ -73,21 +73,26 @@ def plot_plotly(ells):
 
 
 def generate_transfo():
-
-    # T_lst = []
-    # x_range = -0.15, 0, 0.15
-    # z_range = np.arange(1, 5)
-    # for z in z_range:
-    #     for x in x_range:
-    #         R = np.eye(3)
-    #         # R = pin.rpy.rpyToMatrix(np.deg2rad([5, 0, 0]))
-    #         T = pin.SE3(R, np.array([3*z*x, 0, z]))
-    #         T_lst.append(T)
+    """
+    Generate a bunch of transformations representing the 6D
+    pose of apriltags in the camera frame.
+    """
 
     T_lst = []
-    T = pin.SE3(pin.rpy.rpyToMatrix(np.deg2rad([0.0, 0, 0])), np.array([0.0, 0, 0.5])); T_lst.append(T)
-    T = pin.SE3(pin.rpy.rpyToMatrix(np.deg2rad([0.0, 0, 0])), np.array([0.0, 0, 0.6])); T_lst.append(T)
-    T = pin.SE3(pin.rpy.rpyToMatrix(np.deg2rad([0.0, 0, 0])), np.array([0.1, 0, 0.5])); T_lst.append(T)
+    x_range = -0.15, 0, 0.15
+    z_range = np.arange(1, 5)
+    for z in z_range:
+        for x in x_range:
+            R = np.eye(3)
+            # R = pin.rpy.rpyToMatrix(np.deg2rad([10, 0, 0]))
+            R = pin.rpy.rpyToMatrix(np.deg2rad([45, 0, 0]))
+            T = pin.SE3(R, np.array([3*z*x, 0, z]))
+            T_lst.append(T)
+
+    # T_lst = []
+    # T = pin.SE3(pin.rpy.rpyToMatrix(np.deg2rad([0.0, 0, 0])), np.array([0.0, 0, 0.5])); T_lst.append(T)
+    # T = pin.SE3(pin.rpy.rpyToMatrix(np.deg2rad([0.0, 0, 0])), np.array([0.0, 0, 0.6])); T_lst.append(T)
+    # T = pin.SE3(pin.rpy.rpyToMatrix(np.deg2rad([0.0, 0, 0])), np.array([0.1, 0, 0.5])); T_lst.append(T)
     # T = pin.SE3(pin.rpy.rpyToMatrix(np.deg2rad([30, 0, 0])), np.array([0.0, 0, 2])); T_lst.append(T)
     # T = pin.SE3(pin.rpy.rpyToMatrix(np.deg2rad([, 0, 0])), np.array([0.0, 0, 2])); T_lst.append(T)
 
@@ -100,9 +105,10 @@ if __name__ == '__main__':
     print(K)
     # width, height, K = get_cam_model_cv('camera_mohamed.yml')
     # print(K)
-    tag_width = 0.158  # LAAS_solo_walk_11_21
-    # tag_width = 0.2
-    sig_pix = 1.0
+    # tag_width = 0.158  # LAAS_solo_walk_11_21
+    tag_width = 0.15
+    # tag_width = 0.3
+    sig_pix = 2.0
     a_corners = 0.5*tag_width*np.array([
         [-1,  1, 0], # bottom left
         [ 1,  1, 0], # bottom right
@@ -111,7 +117,7 @@ if __name__ == '__main__':
     ])
 
     T_lst = generate_transfo()
-    # express all quantities in a alternate world frame "w prime"
+    # express all quantities in a alternate world frame "w prime" -> does not really work
     # wp_T_w = pin.SE3(pin.rpy.rpyToMatrix(0,-np.pi/2,np.pi/2), np.zeros(3))
     # T_lst = [wp_T_w*T for T in T_lst]
     
@@ -119,7 +125,8 @@ if __name__ == '__main__':
     # chi square ctrical value for dimension 3 and 99 confidence 3 sigma interval
     # https://www.itl.nist.gov/div898/handbook/eda/section3/eda3674.htm
     chi2_conf = 11.345
-    # chi2_conf = 500
+    
+    # We cannot represent the full 6D covariance of the  
     # Q_lst = [chi2_conf*Q[:3,:3] for Q in Q_lst]  # POSITION COV
     Q_lst = [chi2_conf*Q[3:6,3:6] for Q in Q_lst]  # ORIENTATION COV
     ells = cov2ellipses(T_lst, Q_lst)
@@ -129,7 +136,7 @@ if __name__ == '__main__':
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d') 
     plot_frames(ax, pin.SE3.Identity(), la=0.2, ms=10, lw=1)  # camera frame
-    # plot_frames(ax, wp_T_w, 0.2, ms=10, lw=2)  # camera frame
+    # plot_frames(ax, wp_T_w, 0.2, ms=10, lw=2)  # camera frame, world turned (DOES NOT WORK)
     plot_frames(ax, T_lst, la=0.3, ms=10, lw=1)  # tag frames
     for ell in ells:
         plot_ellipsoid_3d_mpl(ax, ell, color='orange')
@@ -152,13 +159,13 @@ if __name__ == '__main__':
     plt.title('Apriltag projection', fontsize=30)
     ax = fig.add_subplot()
     colors = ['black', 'lightcoral', 'orange']
-    print(points_lst)
-    # plot_projs(points_lst, ax)
-    plot_projs(points_lst, ax, colors=colors)
+    # print(points_lst)
+    plot_projs(points_lst, ax)
+    # plot_projs(points_lst, ax, colors=colors)
     ax.tick_params(axis='both', which='major', labelsize=20)
     ax.invert_yaxis()
     # plt.grid()
-    plt.savefig('apriltag_proj.pdf', format='pdf')
+    # plt.savefig('apriltag_proj.pdf', format='pdf')
 
 
 

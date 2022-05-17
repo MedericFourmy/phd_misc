@@ -2,8 +2,6 @@ import numpy as np
 import plotly.offline as plt
 import plotly.graph_objects as go
 from numpy import sin, cos, pi
-import time
-from shutil import copyfile
 
 
 NUM = 50
